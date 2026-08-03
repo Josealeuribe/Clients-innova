@@ -4,7 +4,10 @@ import RoulettePage from '@/features/roulette/RoulettePage'
 import RegistrationPage from '@/features/registration/RegistrationPage'
 import LoginPage from '@/features/login/LoginPage'
 import DashboardPage from '@/features/dashboard/DashboardPage'
-import bgImg from '@/shared/assets/images/image.png'
+import TermsPage from '@/features/terms/TermsPage'
+import PrivacyPolicyPage from '@/features/privacy/PrivacyPolicyPage'
+import bgImg from '@/shared/assets/images/image-copy.png'
+
 import type { Page, AppState } from '@/shared/types/navigation'
 
 export default function App() {
@@ -49,6 +52,8 @@ export default function App() {
         {page === 'dashboard' && (
           <DashboardPage navigate={navigate} prize={appState.prize} userName={appState.userName} />
         )}
+        {page === 'terms' && <TermsPage navigate={navigate} />}
+        {page === 'privacy' && <PrivacyPolicyPage navigate={navigate} />}
       </div>
     </div>
   )

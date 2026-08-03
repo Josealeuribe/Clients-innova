@@ -83,7 +83,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                   : 'text-[#9A7B50] hover:text-[#C4A97A] hover:bg-[#D4AF37]/6'}`}
               style={section === item.id ? {
                 background: 'linear-gradient(135deg, #D4AF37, #A0832A)',
-                fontFamily: "'Sreda', serif",
+                fontFamily: "'Inter', sans-serif",
                 letterSpacing: '0.02em'
               } : {}}>
               <span>{item.icon}</span>
@@ -121,7 +121,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                 <line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" />
               </svg>
             </button>
-            <h1 className="text-lg font-bold text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>
+            <h1 className="text-lg font-bold text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
               {NAV_ITEMS.find(n => n.id === section)?.label || 'Panel'}
             </h1>
           </div>
@@ -149,8 +149,8 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
           {section === 'home' && (
             <div style={{ animation: 'slide-up 0.4s ease-out forwards' }}>
               <div className="mb-6">
-                <p className="text-[#D4AF37] text-xs font-bold tracking-widest mb-1" style={{ fontFamily: "'Sreda', serif" }}>BIENVENIDO</p>
-                <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>
+                <p className="text-[#D4AF37] text-xs font-bold tracking-widest mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>BIENVENIDO</p>
+                <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
                   Hola, {displayName} 👋
                 </h2>
                 <p className="text-[#9A7B50] text-sm mt-1">Estos son tus beneficios disponibles</p>
@@ -162,7 +162,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                   style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04))' }}>
                   <span className="text-4xl">🏆</span>
                   <div>
-                    <p className="text-[#D4AF37] text-xs font-bold tracking-wider mb-0.5" style={{ fontFamily: "'Sreda', serif" }}>PREMIO GANADO</p>
+                    <p className="text-[#D4AF37] text-xs font-bold tracking-wider mb-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>PREMIO GANADO</p>
                     <p className="text-[#F5E6C8] font-semibold">{prize}</p>
                     <p className="text-[#9A7B50] text-xs mt-0.5">Ya disponible en tu cuenta · Vence: 03 sep 2026</p>
                   </div>
@@ -185,7 +185,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                     style={{ background: 'linear-gradient(145deg, #1C1810, #121009)' }}>
                     <div className="text-3xl mb-3">{card.icon}</div>
                     <p className="text-xs text-[#6B5D3F] mb-1">{card.label}</p>
-                    <p className="text-2xl font-black text-[#D4AF37]" style={{ fontFamily: "'Sreda', serif" }}>{card.value}</p>
+                    <p className="text-2xl font-black text-[#D4AF37]" style={{ fontFamily: "'Inter', sans-serif" }}>{card.value}</p>
                     <p className="text-xs text-[#6B5D3F] mt-1">{card.sub}</p>
                   </button>
                 ))}
@@ -194,7 +194,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
               {/* Recent activity */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>Actividad Reciente</h3>
+                  <h3 className="font-bold text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>Actividad Reciente</h3>
                   <button onClick={() => setSection('history')} className="text-xs text-[#D4AF37] hover:underline">Ver todo →</button>
                 </div>
                 <div className="rounded-2xl border border-[#D4AF37]/12 overflow-hidden" style={{ background: '#121009' }}>
@@ -222,7 +222,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
               <div className="rounded-2xl border border-[#D4AF37]/25 p-6 mb-6"
                 style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(212,175,55,0.03) 100%)' }}>
                 <p className="text-[#9A7B50] text-xs mb-1">Créditos disponibles</p>
-                <p className="text-5xl font-black text-[#D4AF37] mb-1" style={{ fontFamily: "'Sreda', serif" }}>
+                <p className="text-5xl font-black text-[#D4AF37] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
                   {credits.toLocaleString()}
                 </p>
                 <p className="text-[#6B5D3F] text-sm">de {totalCredits.toLocaleString()} créditos totales · Vencen: 03 sep 2026</p>
@@ -239,12 +239,12 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                 ].map((stat, i) => (
                   <div key={i} className="rounded-xl border border-[#D4AF37]/12 p-4 text-center" style={{ background: '#121009' }}>
                     <p className="text-xs text-[#6B5D3F] mb-1">{stat.label}</p>
-                    <p className="text-xl font-black" style={{ color: stat.color, fontFamily: "'Sreda', serif" }}>{stat.value}</p>
+                    <p className="text-xl font-black" style={{ color: stat.color, fontFamily: "'Inter', sans-serif" }}>{stat.value}</p>
                   </div>
                 ))}
               </div>
 
-              <h3 className="font-bold text-[#F5E6C8] mb-3" style={{ fontFamily: "'Sreda', serif" }}>Movimientos</h3>
+              <h3 className="font-bold text-[#F5E6C8] mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>Movimientos</h3>
               <div className="rounded-2xl border border-[#D4AF37]/12 overflow-hidden" style={{ background: '#121009' }}>
                 {MOVEMENTS.map((m, i) => (
                   <div key={i} className={`flex items-center gap-4 px-5 py-4 ${i < MOVEMENTS.length - 1 ? 'border-b border-[#D4AF37]/8' : ''}`}>
@@ -274,7 +274,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                       <div className="text-3xl">🎁</div>
                       <StatusBadge label={b.status} color={b.statusColor} />
                     </div>
-                    <h3 className="font-bold text-[#F5E6C8] mt-3 mb-1" style={{ fontFamily: "'Sreda', serif" }}>{b.name}</h3>
+                    <h3 className="font-bold text-[#F5E6C8] mt-3 mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>{b.name}</h3>
                     <p className="text-sm text-[#9A7B50] mb-3">{b.desc}</p>
                     <div className="grid grid-cols-2 gap-3 text-xs text-[#6B5D3F]">
                       <span>Asignado: {b.assigned}</span>
@@ -299,7 +299,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                     <div className="text-3xl">🎴</div>
                     <StatusBadge label={b.status} color={b.statusColor} />
                   </div>
-                  <h3 className="font-bold text-[#F5E6C8] mt-3 mb-2" style={{ fontFamily: "'Sreda', serif" }}>{b.event}</h3>
+                  <h3 className="font-bold text-[#F5E6C8] mt-3 mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>{b.event}</h3>
                   <div className="grid grid-cols-2 gap-3 text-sm text-[#9A7B50] mb-4">
                     <span>📅 {b.date}</span>
                     <span>🕖 {b.time}</span>
@@ -323,7 +323,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                     style={{ background: 'linear-gradient(145deg, #1C1810, #121009)' }}>
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
-                        <h3 className="font-bold text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>{p.name}</h3>
+                        <h3 className="font-bold text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>{p.name}</h3>
                         <p className="text-xs text-[#6B5D3F] mt-0.5">{p.campaign}</p>
                       </div>
                       <StatusBadge label={p.status} color={p.statusColor} />
@@ -374,7 +374,7 @@ export default function DashboardPage({ navigate, prize, userName }: Props) {
                   {displayName[0]}
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>{userName || 'Cliente Innova'}</h3>
+                  <h3 className="text-xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>{userName || 'Cliente Innova'}</h3>
                   <p className="text-sm text-[#9A7B50]">Miembro desde agosto 2026</p>
                   <StatusBadge label="Cuenta activa" color="#22c55e" />
                 </div>

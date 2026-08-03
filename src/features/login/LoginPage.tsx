@@ -59,10 +59,10 @@ export default function LoginPage({ navigate }: Props) {
 
             {loginStep === 'login' && (
               <>
-                <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-1" style={{ fontFamily: "'Sreda', serif" }}>
+                <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
                   INNOVA CLUB SAS
                 </p>
-                <h1 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>
+                <h1 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
                   Bienvenido nuevamente
                 </h1>
                 <p className="text-[#6B5D3F] text-sm mt-1">Accede a tu cuenta para ver tus beneficios</p>
@@ -71,7 +71,7 @@ export default function LoginPage({ navigate }: Props) {
 
             {loginStep === 'forgot' && (
               <>
-                <h1 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>
+                <h1 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
                   Recuperar Contraseña
                 </h1>
                 <p className="text-[#6B5D3F] text-sm mt-1">Te enviaremos un enlace a tu correo</p>
@@ -81,7 +81,7 @@ export default function LoginPage({ navigate }: Props) {
             {loginStep === 'forgot-sent' && (
               <>
                 <div className="text-5xl mb-3">📧</div>
-                <h1 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>
+                <h1 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
                   ¡Correo enviado!
                 </h1>
                 <p className="text-[#9A7B50] text-sm mt-2 max-w-xs mx-auto">
@@ -142,7 +142,7 @@ export default function LoginPage({ navigate }: Props) {
                 disabled={loading}
                 className="mt-2 w-full py-4 rounded-xl font-bold text-[#0a0805] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
                 style={{
-                  fontFamily: "'Sreda', serif",
+                  fontFamily: "'Inter', sans-serif",
                   background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
                   letterSpacing: '0.06em'
                 }}>
@@ -179,7 +179,7 @@ export default function LoginPage({ navigate }: Props) {
                 disabled={loading}
                 className="w-full py-4 rounded-xl font-bold text-[#0a0805] transition-all hover:scale-[1.01] disabled:opacity-60"
                 style={{
-                  fontFamily: "'Sreda', serif",
+                  fontFamily: "'Inter', sans-serif",
                   background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
                   letterSpacing: '0.06em'
                 }}>
@@ -200,7 +200,7 @@ export default function LoginPage({ navigate }: Props) {
                 onClick={() => setLoginStep('login')}
                 className="w-full py-4 rounded-xl font-bold text-[#0a0805] transition-all hover:scale-[1.01]"
                 style={{
-                  fontFamily: "'Sreda', serif",
+                  fontFamily: "'Inter', sans-serif",
                   background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
                   letterSpacing: '0.06em'
                 }}>

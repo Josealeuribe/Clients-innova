@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { Page } from '@/shared/types/navigation'
 import logoImg from '@/shared/assets/images/logo.png'
 import Footer from '@/shared/components/Footer'
+import CasinoTable from '@/shared/components/CasinoTable'
 
 interface Props {
   navigate: (page: Page) => void
@@ -104,10 +105,10 @@ function PrizeModal({ segmentIndex, onClaim, onClose }: PrizeModalProps) {
           </div>
         </div>
 
-        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2" style={{ fontFamily: "'Sreda', serif" }}>
+        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
           ¡FELICITACIONES!
         </p>
-        <h2 className="text-2xl md:text-3xl font-black text-[#F5E6C8] mb-2 leading-tight" style={{ fontFamily: "'Sreda', serif" }}>
+        <h2 className="text-2xl md:text-3xl font-black text-[#F5E6C8] mb-2 leading-tight" style={{ fontFamily: "'Inter', sans-serif" }}>
           {seg.prize}
         </h2>
         <p className="text-[#9A7B50] text-sm mb-2">{seg.detail}</p>
@@ -122,12 +123,12 @@ function PrizeModal({ segmentIndex, onClaim, onClose }: PrizeModalProps) {
         <button onClick={onClaim}
           className="w-full py-4 rounded-xl font-bold text-[#0a0805] transition-all hover:scale-[1.02] active:scale-[0.98] mb-3"
           style={{
-            fontFamily: "'Sreda', serif",
+            fontFamily: "'Inter', sans-serif",
             background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
             letterSpacing: '0.06em',
             animation: 'pulse-glow 2s ease-in-out infinite'
           }}>
-          🏆 Reclamar mi Premio
+           Reclamar mi Premio
         </button>
 
         <button onClick={onClose}
@@ -234,10 +235,10 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
 
       {/* Title */}
       <div className="text-center mb-8">
-        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2" style={{ fontFamily: "'Sreda', serif" }}>
+        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
           PROMOCIÓN DE BIENVENIDA
         </p>
-        <h1 className="text-3xl md:text-4xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Sreda', serif" }}>
+        <h1 className="text-3xl md:text-4xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
           ¡Es tu momento de ganar!
         </h1>
         <p className="text-[#9A7B50] mt-2 text-sm max-w-sm mx-auto">
@@ -246,16 +247,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
       </div>
 
       {/* Wheel container */}
-      <div className="relative flex items-center justify-center mb-8">
-        {/* Outer glow */}
-        <div className="absolute rounded-full"
-          style={{
-            width: 460, height: 460,
-            background: 'radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%)',
-            animation: isSpinning ? 'pulse-glow 0.8s ease-in-out infinite' : 'pulse-glow 3s ease-in-out infinite'
-          }}
-        />
-
+      <div className="relative flex items-center justify-center mb-8" style={{ paddingBottom: 30 }}>
         {/* Fixed pointer */}
         <div className="absolute z-20 flex flex-col items-center"
           style={{ top: -6, left: '50%', transform: 'translateX(-50%)' }}>
@@ -269,6 +261,14 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
           />
         </div>
 
+        {/* 3D tilted wheel assembly */}
+        <div style={{ perspective: 1300 }}>
+        <div className="relative flex items-center justify-center" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(58deg)' }}>
+        {/* Casino table base — static, does not spin */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+          <CasinoTable size={640} />
+        </div>
+
         {/* Wheel */}
         <div
           ref={wheelRef}
@@ -276,11 +276,11 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             transform: `rotate(${rotation}deg)`,
             transition: isSpinning ? 'transform 4.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
             willChange: 'transform',
-            filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.7))'
+            filter: 'drop-shadow(0 25px 20px rgba(0,0,0,0.8))'
           }}
           className="rounded-full"
         >
-          <svg viewBox="0 0 440 440" width={420} height={420} style={{ display: 'block' }}>
+          <svg viewBox="0 0 440 440" width={480} height={480} style={{ display: 'block' }}>
             <defs>
               <filter id="segShadow">
                 <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="rgba(0,0,0,0.5)" />
@@ -349,7 +349,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
                     fill="#fff"
                     fontSize="13"
                     fontWeight="800"
-                    fontFamily="Sreda, sans-serif"
+                    fontFamily="Inter, sans-serif"
                     style={{ pointerEvents: 'none', userSelect: 'none' }}
                   >
                     {num}
@@ -362,6 +362,22 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.7)" strokeWidth="10" />
             <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="20" />
             <circle cx={cx} cy={cy} r={r - 35} fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="10" />
+
+            {/* Red accent ring around the turret, like a classic wheel */}
+            <circle cx={cx} cy={cy} r={r * 0.55} fill="none" stroke="#6E1414" strokeWidth="16" />
+            <circle cx={cx} cy={cy} r={r * 0.55} fill="none" stroke="#B52020" strokeWidth="10" />
+            {[...Array(37)].map((_, i) => {
+              const angle = (i * 2 * Math.PI / 37) - Math.PI / 2
+              const tr = r * 0.55
+              const x1 = cx + (tr - 6) * Math.cos(angle)
+              const y1 = cy + (tr - 6) * Math.sin(angle)
+              const x2 = cx + (tr + 6) * Math.cos(angle)
+              const y2 = cy + (tr + 6) * Math.sin(angle)
+              return (
+                <line key={`tick-${i}`} x1={x1.toFixed(2)} y1={y1.toFixed(2)} x2={x2.toFixed(2)} y2={y2.toFixed(2)}
+                  stroke="#F0C847" strokeWidth="1.5" opacity="0.85" />
+              )
+            })}
 
             {/* Segment dividers (gold lines from center) */}
             {ROULETTE_NUMBERS.map((_, i) => {
@@ -380,7 +396,16 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             <circle cx={cx} cy={cy} r="22" fill="url(#metalHub)" opacity="0.9" />
             <circle cx={cx} cy={cy} r="12" fill="#2A2218" />
             <circle cx={cx} cy={cy} r="6" fill="url(#goldRim)" />
-            <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fill="#0a0805" fontSize="12" fontWeight="900">✦</text>
+
+            {/* Spindle cross — turret handle sitting on top of the hub */}
+            <g filter="drop-shadow(0 4px 6px rgba(0,0,0,0.6))">
+              <rect x={cx - 46} y={cy - 5} width="92" height="10" rx="5" fill="url(#metalHub)" />
+              <rect x={cx - 5} y={cy - 46} width="10" height="92" rx="5" fill="url(#metalHub)" />
+              <circle cx={cx - 46} cy={cy} r="6" fill="url(#goldRim)" />
+              <circle cx={cx + 46} cy={cy} r="6" fill="url(#goldRim)" />
+              <circle cx={cx} cy={cy - 46} r="6" fill="url(#goldRim)" />
+              <circle cx={cx} cy={cy + 46} r="6" fill="url(#goldRim)" />
+            </g>
 
             {/* Decorative gold studs on the outer rim */}
             {[...Array(24)].map((_, i) => {
@@ -415,6 +440,8 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             }}
           />
         </div>
+        </div>
+        </div>
       </div>
 
       {/* Spin Button */}
@@ -424,7 +451,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
           disabled={isSpinning || showModal}
           className="px-10 py-4 rounded-full font-black text-base tracking-wide transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           style={{
-            fontFamily: "'Sreda', serif",
+            fontFamily: "'Inter', sans-serif",
             background: isSpinning
               ? 'linear-gradient(135deg, #8A7020, #6A5518)'
               : 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
@@ -435,7 +462,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             transform: isSpinning ? 'scale(0.97)' : 'scale(1)'
           }}
         >
-          {isSpinning ? '⏳ Descubriendo tu premio...' : '🎰 Girar Ruleta'}
+          {isSpinning ? '⏳ Descubriendo tu premio...' : ' Girar Ruleta'}
         </button>
 
         <p className="mt-3 text-[#6B5D3F] text-xs">
@@ -446,7 +473,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
       {/* Prize legend */}
       {!isSpinning && wonPrizeIdx === null && (
         <div className="mt-10 max-w-lg w-full z-10 relative">
-          <p className="text-center text-[#6B5D3F] text-xs mb-4 tracking-wider uppercase" style={{ fontFamily: "'Sreda', serif" }}>Premios en juego</p>
+          <p className="text-center text-[#6B5D3F] text-xs mb-4 tracking-wider uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>Premios en juego</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {PRIZES.map((seg, i) => (
               <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#D4AF37]/10 text-xs text-[#9A7B50]"
@@ -459,7 +486,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         </div>
       )}
 
-      <div className="w-full -mx-4 mt-auto">
+      <div className="w-full -mx-4 mt-auto pt-20">
         <Footer navigate={navigate} />
       </div>
     </div>

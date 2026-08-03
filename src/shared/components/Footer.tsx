@@ -94,7 +94,7 @@ export default function Footer({ navigate }: Props) {
           <div>
             <h4
               className="text-[#D4AF37] text-xs font-bold tracking-widest mb-4"
-              style={{ fontFamily: "'Sreda', serif" }}
+              style={{ fontFamily: "'Inter', sans-serif" }}
             >
               NAVEGACIÓN
             </h4>
@@ -126,7 +126,7 @@ export default function Footer({ navigate }: Props) {
           <div>
             <h4
               className="text-[#D4AF37] text-xs font-bold tracking-widest mb-4"
-              style={{ fontFamily: "'Sreda', serif" }}
+              style={{ fontFamily: "'Inter', sans-serif" }}
             >
               LEGAL
             </h4>
@@ -138,8 +138,14 @@ export default function Footer({ navigate }: Props) {
               Términos y Condiciones
             </button>
 
+            <button
+              onClick={() => navigate('privacy')}
+              className="block text-[#8D7A55] text-sm mb-2.5 transition-colors hover:text-[#D4AF37] text-left"
+            >
+              Política de Privacidad
+            </button>
+
             {[
-              'Política de Privacidad',
               'Tratamiento de Datos',
               'Juego Responsable',
             ].map((link) => (

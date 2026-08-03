@@ -107,6 +107,15 @@ export default function RegistrationPage({ navigate, prize, onRegister }: Props)
   const [promo, setPromo] = useState(false)
   const [comms, setComms] = useState(false)
 
+  const allConfirmed = terminos && datos && edad && promo && comms
+  const toggleAllConfirmations = (checked: boolean) => {
+    setTerminos(checked)
+    setDatos(checked)
+    setEdad(checked)
+    setPromo(checked)
+    setComms(checked)
+  }
+
   const passStrength = pass.length === 0 ? 0 : pass.length < 6 ? 1 : pass.length < 10 ? 2 : /[A-Z]/.test(pass) && /[0-9]/.test(pass) ? 4 : 3
   const passLabels = ['', 'Muy débil', 'Débil', 'Buena', 'Fuerte']
   const passColors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e']
@@ -133,10 +142,10 @@ export default function RegistrationPage({ navigate, prize, onRegister }: Props)
         style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 60%), #0a0805' }}>
         <div className="max-w-md w-full text-center" style={{ animation: 'modal-in 0.5s ease-out forwards' }}>
           <div className="text-8xl mb-6" style={{ filter: 'drop-shadow(0 0 30px rgba(212,175,55,0.4))' }}>🏆</div>
-          <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-3" style={{ fontFamily: "'Sreda', serif" }}>
+          <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>
             REGISTRO EXITOSO
           </p>
-          <h1 className="text-3xl font-black text-[#F5E6C8] mb-3" style={{ fontFamily: "'Sreda', serif" }}>
+          <h1 className="text-3xl font-black text-[#F5E6C8] mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>
             ¡Tu cuenta fue creada correctamente!
           </h1>
           <p className="text-[#9A7B50] mb-6">Tu premio ya se encuentra disponible en tu perfil. Bienvenido a Innova Club SAS.</p>
@@ -152,7 +161,7 @@ export default function RegistrationPage({ navigate, prize, onRegister }: Props)
             onClick={() => navigate('dashboard')}
             className="w-full py-4 rounded-xl font-bold text-[#0a0805] transition-all hover:scale-[1.02]"
             style={{
-              fontFamily: "'Sreda', serif",
+              fontFamily: "'Inter', sans-serif",
               background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
               animation: 'pulse-glow 2.5s ease-in-out infinite'
             }}>
@@ -179,7 +188,7 @@ export default function RegistrationPage({ navigate, prize, onRegister }: Props)
               {step > 1 ? 'Volver' : 'Cancelar'}
             </button>
             <img src={logoImg} alt="Innova Club" className="h-9 w-auto" />
-            <span className="text-[#6B5D3F] text-xs" style={{ fontFamily: "'Sreda', serif" }}>Paso {step} de 4</span>
+            <span className="text-[#6B5D3F] text-xs" style={{ fontFamily: "'Inter', sans-serif" }}>Paso {step} de 4</span>
           </div>
 
           {/* Progress bar */}
@@ -196,13 +205,13 @@ export default function RegistrationPage({ navigate, prize, onRegister }: Props)
           <div className="rounded-xl border border-[#D4AF37]/25 bg-[#D4AF37]/6 px-4 py-3 mb-6 flex items-center gap-3">
             <span className="text-2xl">🏆</span>
             <div>
-              <p className="text-[#D4AF37] text-xs font-bold tracking-wider" style={{ fontFamily: "'Sreda', serif" }}>PREMIO RESERVADO</p>
+              <p className="text-[#D4AF37] text-xs font-bold tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>PREMIO RESERVADO</p>
               <p className="text-[#C4A97A] text-sm font-semibold">{prize}</p>
             </div>
           </div>
         )}
 
-        <h2 className="text-2xl font-black text-[#F5E6C8] mb-1" style={{ fontFamily: "'Sreda', serif" }}>
+        <h2 className="text-2xl font-black text-[#F5E6C8] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
           {['Datos Personales', 'Ubicación', 'Datos de Acceso', 'Confirmaciones'][step - 1]}
         </h2>
         <p className="text-[#6B5D3F] text-sm mb-8">
@@ -305,6 +314,8 @@ export default function RegistrationPage({ navigate, prize, onRegister }: Props)
         {/* Step 4 */}
         {step === 4 && (
           <div className="flex flex-col gap-4">
+            <Checkbox label="Seleccionar todo" checked={allConfirmed} onChange={toggleAllConfirmations} />
+            <div className="h-px bg-[#D4AF37]/15 my-1" />
             <Checkbox label="Acepto los términos y condiciones de Innova Club SAS." checked={terminos} onChange={setTerminos} required />
             <Checkbox label="Autorizo el tratamiento de mis datos personales conforme a la política de privacidad." checked={datos} onChange={setDatos} required />
             <Checkbox label="Confirmo que soy mayor de 18 años." checked={edad} onChange={setEdad} required />
@@ -321,7 +332,7 @@ export default function RegistrationPage({ navigate, prize, onRegister }: Props)
             disabled={loading}
             className="w-full py-4 rounded-xl font-bold text-[#0a0805] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
             style={{
-              fontFamily: "'Sreda', serif",
+              fontFamily: "'Inter', sans-serif",
               background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
               letterSpacing: '0.06em'
             }}>
