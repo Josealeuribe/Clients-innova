@@ -679,7 +679,7 @@ export default function Roulette3D({
           gl.toneMapping = THREE.ACESFilmicToneMapping
           gl.toneMappingExposure = 1.08
           gl.shadowMap.enabled = true
-          gl.shadowMap.type = THREE.PCFSoftShadowMap
+          gl.shadowMap.type = THREE.PCFShadowMap
           gl.setClearColor(0x000000, 0)
           scene.background = null
           camera.lookAt(0, 0.35, 0)

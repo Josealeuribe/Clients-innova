@@ -14,7 +14,10 @@ export class ApiError extends Error {}
 // En desarrollo queda vacio y las rutas relativas las resuelve el proxy de
 // Vite (ver server.proxy en vite.config.ts). En produccion el front y la API
 // viven en dominios distintos, asi que VITE_API_URL trae el host completo.
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
+// Se recorta la barra final: si la variable se define como "https://api.com/"
+// el fetch terminaria pidiendo "https://api.com//api/..." y esa ruta doble no
+// coincide con ningun router de Express.
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '')
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}/api${path}`, {
