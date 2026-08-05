@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import type { Page } from '@/shared/types/navigation'
-import logoImg from '@/shared/assets/images/logo.png'
+import { useAuth } from '@/shared/context/AuthContext'
+import { ApiError } from '@/shared/api/client'
+import BackButton from '@/shared/components/BackButton'
+import logoImg from '@/shared/assets/images/LOGO-CASINO.png'
+import { Mail, ArrowLeft } from 'lucide-react'
 
 interface Props {
   navigate: (page: Page) => void
@@ -9,20 +13,31 @@ interface Props {
 type LoginStep = 'login' | 'forgot' | 'forgot-sent'
 
 export default function LoginPage({ navigate }: Props) {
+  const { login } = useAuth()
   const [loginStep, setLoginStep] = useState<LoginStep>('login')
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [remember, setRemember] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
   const [resetEmail, setResetEmail] = useState('')
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setLoginError(null)
     setLoading(true)
-    setTimeout(() => {
+    try {
+      const response = await login(email, pass)
+      if (response.tipo === 'staff') {
+        navigate(response.staff.rol === 'admin' ? 'admin' : 'cajero')
+      } else {
+        navigate('dashboard')
+      }
+    } catch (error) {
+      setLoginError(error instanceof ApiError ? error.message : 'No se pudo iniciar sesión. Intenta de nuevo.')
+    } finally {
       setLoading(false)
-      navigate('dashboard')
-    }, 1500)
+    }
   }
 
   const handleForgot = () => {
@@ -38,13 +53,16 @@ export default function LoginPage({ navigate }: Props) {
       style={{ background: 'radial-gradient(ellipse 80% 70% at 50% 0%, rgba(139,26,26,0.1) 0%, transparent 60%), #0a0805' }}>
 
       {/* Background pattern */}
-      <div className="absolute inset-0 opacity-5"
+      <div className="absolute inset-0 opacity-5 pointer-events-none"
         style={{ backgroundImage: 'radial-gradient(circle at center, #D4AF37 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
 
       {/* Card */}
       <div className="relative w-full max-w-md">
-        {/* Glow */}
-        <div className="absolute inset-0 rounded-3xl blur-2xl opacity-20"
+        {/* Glow — puramente decorativo. Sin pointer-events-none, este div
+            (posicionado) se pinta encima del botón "Volver a Inicio" de más
+            abajo (que no está posicionado), aunque venga antes en el DOM —
+            así es como funciona el stacking de CSS — y bloqueaba el clic. */}
+        <div className="absolute inset-0 rounded-3xl blur-2xl opacity-20 pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(212,175,55,0.4) 0%, transparent 70%)' }} />
 
         <div className="relative rounded-3xl border border-[#D4AF37]/20 p-8 md:p-10"
@@ -55,12 +73,12 @@ export default function LoginPage({ navigate }: Props) {
 
           {/* Logo */}
           <div className="text-center mb-8">
-            <img src={logoImg} alt="Innova Club SAS" className="h-16 w-auto mx-auto mb-5" />
+            <img src={logoImg} alt="Gran Casino Cucuta" className="h-16 w-auto mx-auto mb-5" />
 
             {loginStep === 'login' && (
               <>
                 <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  INNOVA CLUB SAS
+                  Gran Casino Cucuta
                 </p>
                 <h1 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
                   Bienvenido nuevamente
@@ -80,7 +98,7 @@ export default function LoginPage({ navigate }: Props) {
 
             {loginStep === 'forgot-sent' && (
               <>
-                <div className="text-5xl mb-3">📧</div>
+                <Mail size={48} className="text-[#D4AF37] mx-auto mb-3" />
                 <h1 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
                   ¡Correo enviado!
                 </h1>
@@ -121,6 +139,12 @@ export default function LoginPage({ navigate }: Props) {
                   </button>
                 </div>
               </div>
+
+              {loginError && (
+                <p className="text-red-400 text-sm text-center bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">
+                  {loginError}
+                </p>
+              )}
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -187,8 +211,8 @@ export default function LoginPage({ navigate }: Props) {
               </button>
 
               <button onClick={() => setLoginStep('login')}
-                className="w-full py-3 rounded-xl text-sm text-[#9A7B50] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 hover:text-[#C4A97A] transition-all">
-                ← Volver al inicio de sesión
+                className="w-full py-3 rounded-xl text-sm text-[#9A7B50] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 hover:text-[#C4A97A] transition-all inline-flex items-center justify-center gap-1.5">
+                <ArrowLeft size={14} /> Volver al inicio de sesión
               </button>
             </div>
           )}
@@ -210,11 +234,9 @@ export default function LoginPage({ navigate }: Props) {
           )}
         </div>
 
-        {/* Back to landing */}
+        {/* Volver siempre a Inicio */}
         <div className="text-center mt-6">
-          <button onClick={() => navigate('landing')} className="text-[#3A3020] text-xs hover:text-[#6B5D3F] transition-colors">
-            ← Volver a la página principal
-          </button>
+          <BackButton className="text-[#9A7B50] text-sm hover:text-[#D4AF37] transition-colors inline-flex items-center gap-1.5 justify-center" />
         </div>
       </div>
     </div>

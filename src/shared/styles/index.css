@@ -14,6 +14,11 @@
   --color-cream-muted: #C4A97A;
 }
 
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   background-color: #0a0805;
   font-family: 'Inter', sans-serif;

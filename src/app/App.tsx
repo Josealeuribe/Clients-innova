@@ -6,25 +6,43 @@ import LoginPage from '@/features/login/LoginPage'
 import DashboardPage from '@/features/dashboard/DashboardPage'
 import TermsPage from '@/features/terms/TermsPage'
 import PrivacyPolicyPage from '@/features/privacy/PrivacyPolicyPage'
+import HomePage from '@/features/home/HomePage'
+import PrizesPage from '@/features/prizes/PrizesPage'
+import HowItWorksPage from '@/features/how-it-works/HowItWorksPage'
+import FaqPage from '@/features/faq/FaqPage'
+import ResponsibleGamingPage from '@/features/responsible-gaming/ResponsibleGamingPage'
+import AdminPage from '@/features/admin/AdminPage'
+import CajeroPage from '@/features/cajero/CajeroPage'
+import Navbar from '@/shared/components/Navbar'
+import { NavigationProvider, useNavigation } from '@/shared/context/NavigationContext'
 import bgImg from '@/shared/assets/images/image-copy.png'
 
 import type { Page, AppState } from '@/shared/types/navigation'
 
-export default function App() {
-  const [page, setPage] = useState<Page>('landing')
-  const [appState, setAppState] = useState<AppState>({ prize: null, userName: null })
+const PAGES_WITH_NAVBAR: Page[] = [
+  'landing',
+  'home',
+  'prizes',
+  'how-it-works',
+  'faq',
+  'responsible-gaming',
+  'terms',
+  'privacy',
+  'roulette',
+]
 
-  const navigate = (newPage: Page) => {
-    window.scrollTo(0, 0)
-    setPage(newPage)
-  }
-  const setPrize = (prize: string) => setAppState(prev => ({ ...prev, prize }))
-  const setUserName = (name: string) => setAppState(prev => ({ ...prev, userName: name }))
+function AppShell() {
+  const { page, navigate } = useNavigation()
+  const [appState, setAppState] = useState<AppState>({ prize: null, ticket: null })
+
+  const setPrizeWon = (prize: string, ticket: string) => setAppState({ prize, ticket })
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0a0805]">
-      {/* Background Image with Blur and Overlay (Only on Landing and Roulette) */}
-      {(page === 'landing' || page === 'roulette') && (
+      {PAGES_WITH_NAVBAR.includes(page) && <Navbar navigate={navigate} />}
+
+      {/* Background Image with Blur and Overlay (all pages that share the navbar/footer chrome) */}
+      {PAGES_WITH_NAVBAR.includes(page) && (
         <>
           <div
             className="fixed inset-0 z-0 pointer-events-none"
@@ -44,17 +62,30 @@ export default function App() {
       {/* Main Content */}
       <div className="relative z-10 min-h-screen">
         {page === 'landing' && <LandingPage navigate={navigate} />}
-        {page === 'roulette' && <RoulettePage navigate={navigate} onPrizeWon={setPrize} />}
+        {page === 'roulette' && <RoulettePage navigate={navigate} onPrizeWon={setPrizeWon} />}
         {page === 'register' && (
-          <RegistrationPage navigate={navigate} prize={appState.prize} onRegister={setUserName} />
+          <RegistrationPage navigate={navigate} prize={appState.prize} ticket={appState.ticket} />
         )}
         {page === 'login' && <LoginPage navigate={navigate} />}
-        {page === 'dashboard' && (
-          <DashboardPage navigate={navigate} prize={appState.prize} userName={appState.userName} />
-        )}
+        {page === 'dashboard' && <DashboardPage navigate={navigate} />}
         {page === 'terms' && <TermsPage navigate={navigate} />}
         {page === 'privacy' && <PrivacyPolicyPage navigate={navigate} />}
+        {page === 'home' && <HomePage navigate={navigate} />}
+        {page === 'prizes' && <PrizesPage navigate={navigate} />}
+        {page === 'how-it-works' && <HowItWorksPage navigate={navigate} />}
+        {page === 'faq' && <FaqPage navigate={navigate} />}
+        {page === 'responsible-gaming' && <ResponsibleGamingPage navigate={navigate} />}
+        {page === 'admin' && <AdminPage navigate={navigate} />}
+        {page === 'cajero' && <CajeroPage navigate={navigate} />}
       </div>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <NavigationProvider initialPage="landing">
+      <AppShell />
+    </NavigationProvider>
   )
 }

@@ -1,71 +1,42 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
+import { X } from 'lucide-react'
 import type { Page } from '@/shared/types/navigation'
-import logoImg from '@/shared/assets/images/logo.png'
 import Footer from '@/shared/components/Footer'
-import CasinoTable from '@/shared/components/CasinoTable'
+import BackButton from '@/shared/components/BackButton'
+import { RouletteSpinCommand } from './types/roulette.types'
+import { TOTAL_POCKETS } from './constants/roulette.constants'
+import Roulette3D from './components/Roulette3D'
+import { PRIZES } from '@/shared/data/prizes'
+import { spinRoulette, ApiError } from '@/shared/api/client'
 
 interface Props {
   navigate: (page: Page) => void
-  onPrizeWon: (prize: string) => void
-}
-
-const PRIZES = [
-  { label: '5,000', sublabel: 'Créditos', color: '#C9A227', lightColor: '#F0C847', prize: '5,000 Créditos Promocionales', emoji: '💰', detail: 'Acreditados directamente en tu cuenta.' },
-  { label: 'Bono', sublabel: 'Especial', color: '#7B1515', lightColor: '#B52020', prize: 'Bono de Bienvenida Especial', emoji: '🎁', detail: 'Bono exclusivo para nuevos miembros.' },
-  { label: 'Cartón', sublabel: 'Bingo', color: '#3D006B', lightColor: '#6A00B8', prize: 'Cartón de Bingo Premium', emoji: '🎴', detail: 'Para el próximo evento en vivo del club.' },
-  { label: 'Giro', sublabel: 'Extra', color: '#002B70', lightColor: '#004FCC', prize: 'Giro Adicional en la Ruleta', emoji: '🔄', detail: 'Vuelve a girar y gana otro premio.' },
-  { label: '10,000', sublabel: 'Créditos', color: '#8A6000', lightColor: '#C08800', prize: '10,000 Créditos Promocionales', emoji: '⭐', detail: 'Nuestro premio mayor de créditos.' },
-  { label: 'Bono', sublabel: 'VIP', color: '#7B1515', lightColor: '#B52020', prize: 'Bono VIP Exclusivo', emoji: '👑', detail: 'Acceso a beneficios de nivel platinum.' },
-  { label: 'Entrada', sublabel: 'Evento', color: '#0D3B0D', lightColor: '#1A6E1A', prize: 'Entrada a Evento Especial', emoji: '🎪', detail: 'Acceso VIP al próximo evento del club.' },
-  { label: 'Premio', sublabel: 'Sorpresa', color: '#3D006B', lightColor: '#6A00B8', prize: 'Premio Sorpresa Exclusivo', emoji: '🎉', detail: 'Una sorpresa especial de Innova Club.' },
-]
-
-const ROULETTE_NUMBERS = ['0', '32', '15', '19', '4', '21', '2', '25', '17', '34', '6', '27', '13', '36', '11', '30', '8', '23', '10', '5', '24', '16', '33', '1', '20', '14', '31', '9', '22', '18', '29', '7', '28', '12', '35', '3', '26']
-const RED_NUMBERS = ['32', '19', '21', '25', '34', '27', '36', '30', '23', '5', '16', '1', '14', '9', '18', '7', '12', '3']
-
-const TOTAL = ROULETTE_NUMBERS.length
-const SEG_ANGLE = 360 / TOTAL
-
-function segPath(i: number, cx: number, cy: number, r: number): string {
-  const angle = (2 * Math.PI) / TOTAL
-  const sa = i * angle - Math.PI / 2
-  const ea = (i + 1) * angle - Math.PI / 2
-  const x1 = cx + r * Math.cos(sa)
-  const y1 = cy + r * Math.sin(sa)
-  const x2 = cx + r * Math.cos(ea)
-  const y2 = cy + r * Math.sin(ea)
-  return `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`
-}
-
-function segTextPos(i: number, cx: number, cy: number, r: number) {
-  const angle = (2 * Math.PI) / TOTAL
-  const mid = (i + 0.5) * angle - Math.PI / 2
-  const tr = r * 0.86 // Place text near the outer rim
-  return {
-    x: cx + tr * Math.cos(mid),
-    y: cy + tr * Math.sin(mid),
-    deg: (mid * 180 / Math.PI) + 90,
-  }
+  onPrizeWon: (prize: string, ticket: string) => void
 }
 
 function Confetti() {
   const colors = ['#D4AF37', '#F0C847', '#8B1A1A', '#B52020', '#4B0082', '#0a0805', '#F5E6C8']
+
   return (
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-      {[...Array(50)].map((_, i) => {
-        const color = colors[i % colors.length]
+      {Array.from({ length: 50 }, (_, index) => {
+        const color = colors[index % colors.length]
         const left = `${Math.random() * 100}%`
         const delay = `${Math.random() * 1.5}s`
         const duration = `${2 + Math.random() * 2}s`
         const size = 6 + Math.floor(Math.random() * 8)
+
         return (
-          <div key={i}
+          <div
+            key={index}
             className="absolute"
             style={{
-              left, top: '-20px',
-              width: size, height: size,
+              left,
+              top: '-20px',
+              width: size,
+              height: size,
               background: color,
-              borderRadius: i % 2 === 0 ? '50%' : '2px',
+              borderRadius: index % 2 === 0 ? '50%' : '2px',
               animation: `confetti-drop ${duration} ease-in forwards`,
               animationDelay: delay,
             }}
@@ -83,56 +54,83 @@ interface PrizeModalProps {
 }
 
 function PrizeModal({ segmentIndex, onClaim, onClose }: PrizeModalProps) {
-  const seg = PRIZES[segmentIndex]
+  const prize = PRIZES[segmentIndex]
+  const { monetary } = prize
+
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.82)' }}>
-      <div className="relative max-w-md w-full rounded-3xl border border-[#D4AF37]/40 p-8 text-center"
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.82)' }}
+    >
+      <div
+        className="relative max-w-md w-full rounded-3xl border border-[#D4AF37]/40 p-8 text-center"
         style={{
           background: 'linear-gradient(145deg, #1C1810 0%, #121009 100%)',
           animation: 'modal-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards',
-          boxShadow: '0 0 60px rgba(212,175,55,0.2), 0 30px 80px rgba(0,0,0,0.6)'
-        }}>
-        <button onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full border border-[#D4AF37]/25 flex items-center justify-center text-[#9A7B50] hover:text-[#D4AF37] hover:border-[#D4AF37]/50 transition-all text-sm">
-          ✕
+          boxShadow: '0 0 60px rgba(212,175,55,0.2), 0 30px 80px rgba(0,0,0,0.6)',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar modal"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full border border-[#D4AF37]/25 flex items-center justify-center text-[#9A7B50] hover:text-[#D4AF37] hover:border-[#D4AF37]/50 transition-all"
+        >
+          <X size={16} />
         </button>
 
-        {/* Trophy icon */}
-        <div className="text-7xl mb-3 relative">
-          <span style={{ filter: 'drop-shadow(0 0 20px rgba(212,175,55,0.5))' }}>{seg.emoji}</span>
+        <div className="mb-3 relative flex items-center justify-center">
+          <prize.icon size={72} className="text-[#D4AF37]" style={{ filter: 'drop-shadow(0 0 20px rgba(212,175,55,0.5))' }} />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-20 h-20 rounded-full bg-[#D4AF37]/8 animate-ping" style={{ animationDuration: '2s' }} />
+            <div
+              className="w-20 h-20 rounded-full bg-[#D4AF37]/8 animate-ping"
+              style={{ animationDuration: '2s' }}
+            />
           </div>
         </div>
 
-        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2">
           ¡FELICITACIONES!
         </p>
-        <h2 className="text-2xl md:text-3xl font-black text-[#F5E6C8] mb-2 leading-tight" style={{ fontFamily: "'Inter', sans-serif" }}>
-          {seg.prize}
+        <h2 className="text-2xl md:text-3xl font-black text-[#F5E6C8] mb-2 leading-tight">
+          {prize.prize}
         </h2>
-        <p className="text-[#9A7B50] text-sm mb-2">{seg.detail}</p>
+        <p className="text-[#9A7B50] text-sm mb-2">{prize.detail}</p>
 
         <div className="my-5 mx-auto w-3/4 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
 
         <div className="bg-[#D4AF37]/8 border border-[#D4AF37]/20 rounded-xl p-3 mb-6 text-sm text-[#C4A97A]">
-          <span className="block font-semibold text-[#D4AF37] mb-1">Premio reservado:</span>
-          Tienes 30 minutos para reclamarlo. Completa tu registro para no perderlo.
+          {monetary ? (
+            <>
+              <span className="block font-semibold text-[#D4AF37] mb-1">Bono reservado:</span>
+              Tienes 30 minutos para reclamarlo. Completa tu registro para dejarlo reservado a tu nombre y redímelo en cualquiera de nuestras sedes.
+            </>
+          ) : (
+            <>
+              <span className="block font-semibold text-[#D4AF37] mb-1">Beneficio del club:</span>
+              Este premio es una cortesía o experiencia de Gran Casino Cucuta, redimible únicamente en sede. Tienes 30 minutos para reclamarlo completando tu registro. Ningún premio se entrega en efectivo ni por transferencia.
+            </>
+          )}
         </div>
 
-        <button onClick={onClaim}
+        <button
+          type="button"
+          onClick={onClaim}
           className="w-full py-4 rounded-xl font-bold text-[#0a0805] transition-all hover:scale-[1.02] active:scale-[0.98] mb-3"
           style={{
-            fontFamily: "'Inter', sans-serif",
             background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
             letterSpacing: '0.06em',
-            animation: 'pulse-glow 2s ease-in-out infinite'
-          }}>
-           Reclamar mi Premio
+            animation: 'pulse-glow 2s ease-in-out infinite',
+          }}
+        >
+          Reclamar mi Premio
         </button>
 
-        <button onClick={onClose}
-          className="w-full py-2.5 rounded-xl text-sm text-[#9A7B50] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 hover:text-[#C4A97A] transition-all">
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-2.5 rounded-xl text-sm text-[#9A7B50] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 hover:text-[#C4A97A] transition-all"
+        >
           Ver condiciones
         </button>
       </div>
@@ -141,76 +139,76 @@ function PrizeModal({ segmentIndex, onClaim, onClose }: PrizeModalProps) {
 }
 
 export default function RoulettePage({ navigate, onPrizeWon }: Props) {
-  const [rotation, setRotation] = useState(0)
-  const [ballRotation, setBallRotation] = useState(0)
-  const [ballRadius, setBallRadius] = useState(195) // Starts at the outer track
-
   const [isSpinning, setIsSpinning] = useState(false)
   const [wonPrizeIdx, setWonPrizeIdx] = useState<number | null>(null)
+  const [pendingPrizeIdx, setPendingPrizeIdx] = useState<number | null>(null)
+  const [prizeTicket, setPrizeTicket] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
-  const wheelRef = useRef<HTMLDivElement>(null)
+  const [spinCommand, setSpinCommand] = useState<RouletteSpinCommand | null>(null)
+  const [spinError, setSpinError] = useState<string | null>(null)
 
-  const cx = 220, cy = 220, r = 182
-
-  const spin = () => {
+  const spin = async () => {
     if (isSpinning || showModal) return
-    setWonPrizeIdx(null)
+
+    setSpinError(null)
     setIsSpinning(true)
-    setBallRadius(195)
 
-    const targetPocket = Math.floor(Math.random() * TOTAL)
-    const targetPrize = Math.floor(Math.random() * PRIZES.length)
-
-    // Wheel rotates clockwise
-    const targetAngle = targetPocket * SEG_ANGLE + SEG_ANGLE / 2
-    const currentMod = rotation % 360
-    const extra = (targetAngle - currentMod + 360) % 360
-    const totalWheelSpins = 6 * 360 + extra
-    const newRot = rotation + totalWheelSpins
-
-    // Calculate ball absolute target angle so it lands in targetPocket
-    const pocketAbsAngle = newRot + (targetPocket * SEG_ANGLE)
-
-    // Ball spins counter-clockwise around 10 times
-    let targetBallRot = ballRotation - (360 * 10)
-    const remainder = pocketAbsAngle % 360
-    targetBallRot = Math.floor(targetBallRot / 360) * 360 + remainder
-    if (targetBallRot > ballRotation - 360 * 6) {
-        targetBallRot -= 360
+    // El premio ya NO se decide aquí: el servidor hace el sorteo ponderado
+    // real y firma un ticket que se reclama al completar el registro.
+    // targetPocket sigue siendo local porque solo controla dónde se detiene
+    // visualmente la ruleta 3D (es decorativo, no revela ni afecta el premio).
+    let result
+    try {
+      result = await spinRoulette()
+    } catch (error) {
+      setIsSpinning(false)
+      setSpinError(error instanceof ApiError ? error.message : 'No se pudo girar la ruleta. Intenta de nuevo.')
+      return
     }
 
-    setRotation(newRot)
+    const targetPocket = Math.floor(Math.random() * TOTAL_POCKETS)
+    const targetPrize = PRIZES.findIndex((p) => p.clave === result.premio.clave)
 
-    // Animate ball drop after 2 seconds
-    setTimeout(() => {
-      setBallRadius(142) // Drop to pocket radius
-    }, 2000)
+    setWonPrizeIdx(null)
+    setPendingPrizeIdx(targetPrize)
+    setPrizeTicket(result.ticket)
+    setShowModal(false)
 
-    // Ball starts moving immediately
-    setBallRotation(targetBallRot)
+    setSpinCommand({
+      id: Date.now(),
+      targetPocket,
+      durationMs: 5600,
+    })
+  }
 
-    setTimeout(() => {
-      setIsSpinning(false)
-      setWonPrizeIdx(targetPrize)
-      setShowConfetti(true)
-      setTimeout(() => setShowModal(true), 600)
-      setTimeout(() => setShowConfetti(false), 4000)
-    }, 4550)
+  const handleSpinComplete = () => {
+    if (pendingPrizeIdx === null) return
+
+    setIsSpinning(false)
+    setWonPrizeIdx(pendingPrizeIdx)
+    setShowConfetti(true)
+
+    window.setTimeout(() => setShowModal(true), 500)
+    window.setTimeout(() => setShowConfetti(false), 4000)
   }
 
   const handleClaim = () => {
-    if (wonPrizeIdx !== null) {
-      onPrizeWon(PRIZES[wonPrizeIdx].prize)
+    if (wonPrizeIdx !== null && prizeTicket) {
+      onPrizeWon(PRIZES[wonPrizeIdx].prize, prizeTicket)
     }
+
     setShowModal(false)
     navigate('register')
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start pt-6 pb-16 px-4 relative overflow-hidden bg-transparent"
-      style={{ background: 'radial-gradient(ellipse 100% 70% at 50% 0%, rgba(139,26,26,0.3) 0%, transparent 60%)' }}>
-
+    <div
+      className="min-h-screen flex flex-col items-center justify-start pt-28 md:pt-32 pb-16 px-4 sm:px-6 relative overflow-hidden bg-transparent"
+      style={{
+        background: 'radial-gradient(ellipse 100% 70% at 50% 0%, rgba(139,26,26,0.3) 0%, transparent 60%)',
+      }}
+    >
       {showConfetti && <Confetti />}
       {showModal && wonPrizeIdx !== null && (
         <PrizeModal
@@ -220,25 +218,15 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         />
       )}
 
-      {/* Header */}
-      <div className="w-full max-w-4xl mb-8 flex items-center justify-between">
-        <button onClick={() => navigate('landing')}
-          className="flex items-center gap-2 text-[#9A7B50] hover:text-[#D4AF37] transition-colors text-sm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 5l-7 7 7 7" />
-          </svg>
-          Volver
-        </button>
-        <img src={logoImg} alt="Innova Club SAS" className="h-12 w-auto" />
-        <div className="w-16" />
+      <div className="w-full max-w-lg mb-4 z-10">
+        <BackButton />
       </div>
 
-      {/* Title */}
-      <div className="text-center mb-8">
-        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="text-center mb-1 z-10">
+        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2">
           PROMOCIÓN DE BIENVENIDA
         </p>
-        <h1 className="text-3xl md:text-4xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <h1 className="text-3xl md:text-4xl font-black text-[#F5E6C8]">
           ¡Es tu momento de ganar!
         </h1>
         <p className="text-[#9A7B50] mt-2 text-sm max-w-sm mx-auto">
@@ -246,247 +234,71 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         </p>
       </div>
 
-      {/* Wheel container */}
-      <div className="relative flex items-center justify-center mb-8" style={{ paddingBottom: 30 }}>
-        {/* Fixed pointer */}
-        <div className="absolute z-20 flex flex-col items-center"
-          style={{ top: -6, left: '50%', transform: 'translateX(-50%)' }}>
-          <div className="w-0 h-0"
-            style={{
-              borderLeft: '14px solid transparent',
-              borderRight: '14px solid transparent',
-              borderTop: '28px solid #D4AF37',
-              filter: 'drop-shadow(0 4px 8px rgba(212,175,55,0.8))'
-            }}
-          />
-        </div>
-
-        {/* 3D tilted wheel assembly */}
-        <div style={{ perspective: 1300 }}>
-        <div className="relative flex items-center justify-center" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(58deg)' }}>
-        {/* Casino table base — static, does not spin */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-          <CasinoTable size={640} />
-        </div>
-
-        {/* Wheel */}
-        <div
-          ref={wheelRef}
-          style={{
-            transform: `rotate(${rotation}deg)`,
-            transition: isSpinning ? 'transform 4.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
-            willChange: 'transform',
-            filter: 'drop-shadow(0 25px 20px rgba(0,0,0,0.8))'
-          }}
-          className="rounded-full"
-        >
-          <svg viewBox="0 0 440 440" width={480} height={480} style={{ display: 'block' }}>
-            <defs>
-              <filter id="segShadow">
-                <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="rgba(0,0,0,0.5)" />
-              </filter>
-              <radialGradient id="goldRim" cx="50%" cy="50%" r="50%">
-                <stop offset="70%" stopColor="#8A6327" />
-                <stop offset="85%" stopColor="#E6C27A" />
-                <stop offset="95%" stopColor="#D4AF37" />
-                <stop offset="100%" stopColor="#6A4B1A" />
-              </radialGradient>
-              <radialGradient id="woodRim" cx="50%" cy="50%" r="50%">
-                <stop offset="75%" stopColor="#301509" />
-                <stop offset="95%" stopColor="#5C2B14" />
-                <stop offset="100%" stopColor="#1A0C05" />
-              </radialGradient>
-              <linearGradient id="metalHub" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#E6C27A" />
-                <stop offset="30%" stopColor="#D4AF37" />
-                <stop offset="70%" stopColor="#8A6327" />
-                <stop offset="100%" stopColor="#593C11" />
-              </linearGradient>
-            </defs>
-
-            {/* Base/Rim - Drawn FIRST so it stays behind segments */}
-            <circle cx={cx} cy={cy} r={r + 20} fill="url(#woodRim)" />
-            <circle cx={cx} cy={cy} r={r + 14} fill="none" stroke="url(#goldRim)" strokeWidth="12" />
-
-            {/* Segments */}
-            {ROULETTE_NUMBERS.map((num, i) => {
-              const pos = segTextPos(i, cx, cy, r)
-              const isGreen = num === '0'
-              const isRed = RED_NUMBERS.includes(num)
-              const fillColor = isGreen ? '#1A6E1A' : (isRed ? '#B52020' : '#1C1810')
-              const lightColor = isGreen ? '#2CB52C' : (isRed ? '#F0C847' : '#2A241A')
-
-              return (
-                <g key={i}>
-                  <path
-                    d={segPath(i, cx, cy, r)}
-                    fill={fillColor}
-                    stroke="#0a0805"
-                    strokeWidth="0.5"
-                  />
-                  {/* Subtle inner arc for depth */}
-                  <path
-                    d={segPath(i, cx, cy, r * 0.95)}
-                    fill={lightColor}
-                    opacity="0.1"
-                    stroke="none"
-                  />
-                  {/* Outer pocket separator */}
-                  <path
-                    d={segPath(i, cx, cy, r * 0.7)}
-                    fill="none"
-                    stroke="#D4AF37"
-                    strokeWidth="1.5"
-                    opacity="0.3"
-                  />
-                  {/* Text (Number) */}
-                  <text
-                    x={pos.x}
-                    y={pos.y + 1}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    transform={`rotate(${pos.deg}, ${pos.x}, ${pos.y})`}
-                    fill="#fff"
-                    fontSize="13"
-                    fontWeight="800"
-                    fontFamily="Inter, sans-serif"
-                    style={{ pointerEvents: 'none', userSelect: 'none' }}
-                  >
-                    {num}
-                  </text>
-                </g>
-              )
-            })}
-
-            {/* Inner rim shadow to add depth to segments */}
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.7)" strokeWidth="10" />
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="20" />
-            <circle cx={cx} cy={cy} r={r - 35} fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="10" />
-
-            {/* Red accent ring around the turret, like a classic wheel */}
-            <circle cx={cx} cy={cy} r={r * 0.55} fill="none" stroke="#6E1414" strokeWidth="16" />
-            <circle cx={cx} cy={cy} r={r * 0.55} fill="none" stroke="#B52020" strokeWidth="10" />
-            {[...Array(37)].map((_, i) => {
-              const angle = (i * 2 * Math.PI / 37) - Math.PI / 2
-              const tr = r * 0.55
-              const x1 = cx + (tr - 6) * Math.cos(angle)
-              const y1 = cy + (tr - 6) * Math.sin(angle)
-              const x2 = cx + (tr + 6) * Math.cos(angle)
-              const y2 = cy + (tr + 6) * Math.sin(angle)
-              return (
-                <line key={`tick-${i}`} x1={x1.toFixed(2)} y1={y1.toFixed(2)} x2={x2.toFixed(2)} y2={y2.toFixed(2)}
-                  stroke="#F0C847" strokeWidth="1.5" opacity="0.85" />
-              )
-            })}
-
-            {/* Segment dividers (gold lines from center) */}
-            {ROULETTE_NUMBERS.map((_, i) => {
-              const angle = (i * (2 * Math.PI) / TOTAL) - Math.PI / 2
-              const x2 = cx + (r) * Math.cos(angle)
-              const y2 = cy + (r) * Math.sin(angle)
-              return (
-                <line key={i} x1={cx} y1={cy} x2={x2.toFixed(2)} y2={y2.toFixed(2)}
-                  stroke="url(#metalHub)" strokeWidth="1.5" opacity="0.6" />
-              )
-            })}
-
-            {/* Realistic Metal Center Hub */}
-            <circle cx={cx} cy={cy} r="38" fill="url(#metalHub)" filter="drop-shadow(0 6px 12px rgba(0,0,0,0.6))" />
-            <circle cx={cx} cy={cy} r="28" fill="#1A140C" stroke="url(#goldRim)" strokeWidth="2" />
-            <circle cx={cx} cy={cy} r="22" fill="url(#metalHub)" opacity="0.9" />
-            <circle cx={cx} cy={cy} r="12" fill="#2A2218" />
-            <circle cx={cx} cy={cy} r="6" fill="url(#goldRim)" />
-
-            {/* Spindle cross — turret handle sitting on top of the hub */}
-            <g filter="drop-shadow(0 4px 6px rgba(0,0,0,0.6))">
-              <rect x={cx - 46} y={cy - 5} width="92" height="10" rx="5" fill="url(#metalHub)" />
-              <rect x={cx - 5} y={cy - 46} width="10" height="92" rx="5" fill="url(#metalHub)" />
-              <circle cx={cx - 46} cy={cy} r="6" fill="url(#goldRim)" />
-              <circle cx={cx + 46} cy={cy} r="6" fill="url(#goldRim)" />
-              <circle cx={cx} cy={cy - 46} r="6" fill="url(#goldRim)" />
-              <circle cx={cx} cy={cy + 46} r="6" fill="url(#goldRim)" />
-            </g>
-
-            {/* Decorative gold studs on the outer rim */}
-            {[...Array(24)].map((_, i) => {
-              const angle = (i * 2 * Math.PI / 24) - Math.PI / 2
-              const dr = r + 14 // middle of the gold rim
-              return (
-                <circle key={i} cx={cx + dr * Math.cos(angle)} cy={cy + dr * Math.sin(angle)}
-                  r="3.5" fill="url(#metalHub)" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.9))" />
-              )
-            })}
-          </svg>
-        </div>
-
-        {/* The Ball Animation Layer */}
-        <div
-          className="absolute inset-0 pointer-events-none flex items-center justify-center z-10"
-          style={{
-            transform: `rotate(${ballRotation}deg)`,
-            transition: isSpinning ? 'transform 4.5s cubic-bezier(0.12, 0, 0.39, 1)' : 'none',
-          }}
-        >
-          <div
-            className="absolute rounded-full"
-            style={{
-              width: 14, height: 14,
-              background: 'radial-gradient(circle at 30% 30%, #fff 0%, #d4d4d4 40%, #737373 100%)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.6), inset -2px -2px 4px rgba(0,0,0,0.4)',
-              top: `calc(50% - ${ballRadius}px - 7px)`,
-              left: `calc(50% - 7px)`,
-              transition: isSpinning ? 'top 2.5s cubic-bezier(0.4, 0, 1, 1)' : 'none',
-              transformOrigin: 'center'
-            }}
-          />
-        </div>
-        </div>
-        </div>
+      {/* La ruleta ya no usa SVG ni rotateX. La profundidad proviene de geometría real. */}
+      <div className="w-full max-w-[860px] h-[390px] sm:h-[500px] md:h-[590px] -mt-2 md:-mt-8 z-0">
+        <Roulette3D
+          spinCommand={spinCommand}
+          onSpinComplete={handleSpinComplete}
+          quality="high"
+          className="w-full h-full"
+        />
       </div>
 
-      {/* Spin Button */}
-      <div className="text-center">
+      <div className="text-center -mt-7 md:-mt-12 z-10">
         <button
+          type="button"
           onClick={spin}
           disabled={isSpinning || showModal}
           className="px-10 py-4 rounded-full font-black text-base tracking-wide transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           style={{
-            fontFamily: "'Inter', sans-serif",
             background: isSpinning
               ? 'linear-gradient(135deg, #8A7020, #6A5518)'
               : 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
             color: '#0a0805',
             letterSpacing: '0.1em',
-            minWidth: 220,
+            minWidth: 250,
             animation: isSpinning ? 'none' : 'pulse-glow 2.5s ease-in-out infinite',
-            transform: isSpinning ? 'scale(0.97)' : 'scale(1)'
+            transform: isSpinning ? 'scale(0.97)' : 'scale(1)',
           }}
         >
-          {isSpinning ? '⏳ Descubriendo tu premio...' : ' Girar Ruleta'}
+          {isSpinning ? '⏳ Descubriendo tu premio...' : 'Girar Ruleta'}
         </button>
 
+        {spinError && <p className="mt-3 text-red-400 text-xs">{spinError}</p>}
+
         <p className="mt-3 text-[#6B5D3F] text-xs">
-          Un giro por promoción · <button onClick={() => navigate('terms')} className="hover:text-[#9A7B50] transition-colors underline">Ver términos</button>
+          Un giro por promoción ·{' '}
+          <button
+            type="button"
+            onClick={() => navigate('terms')}
+            className="hover:text-[#9A7B50] transition-colors underline"
+          >
+            Ver términos
+          </button>
         </p>
       </div>
 
-      {/* Prize legend */}
-      {!isSpinning && wonPrizeIdx === null && (
-        <div className="mt-10 max-w-lg w-full z-10 relative">
-          <p className="text-center text-[#6B5D3F] text-xs mb-4 tracking-wider uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>Premios en juego</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {PRIZES.map((seg, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#D4AF37]/10 text-xs text-[#9A7B50]"
-                style={{ background: 'rgba(18,16,9,0.7)', backdropFilter: 'blur(4px)' }}>
-                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: seg.color }} />
-                <span className="truncate">{seg.label} {seg.sublabel}</span>
-              </div>
-            ))}
-          </div>
+      {/* Se mantiene visible siempre (girando o no) — el jugador debe poder
+          seguir viendo todos los premios en juego en todo momento. */}
+      <div className="mt-10 max-w-lg w-full z-10 relative">
+        <p className="text-center text-[#6B5D3F] text-xs mb-4 tracking-wider uppercase">
+          Premios en juego
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {PRIZES.map((prize) => (
+            <div
+              key={prize.clave}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#D4AF37]/10 text-xs text-[#9A7B50]"
+              style={{ background: 'rgba(18,16,9,0.7)', backdropFilter: 'blur(4px)' }}
+            >
+              <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: prize.color }} />
+              <span className="truncate">{prize.label} {prize.sublabel}</span>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
-      <div className="w-full -mx-4 mt-auto pt-20">
+      <div className="w-full -mx-4 sm:-mx-6 mt-auto pt-20">
         <Footer navigate={navigate} />
       </div>
     </div>
