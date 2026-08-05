@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
@@ -12,9 +15,6 @@
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.7.0",
-    "@react-three/postprocessing": "^3.0.4",
-    "@react-three/rapier": "^2.2.0",
-    "icons": "^1.0.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.28.0",
     "react": "^19.2.8",
