@@ -212,6 +212,13 @@ export interface AdminCanjeRow {
   }
 }
 
+// `soloPropios` es true cuando quien consulta es una cajera: solo ve sus
+// canjes. Un admin recibe false y ve todos.
+export interface HistorialResponse {
+  soloPropios: boolean
+  canjes: CanjeHistorialRow[]
+}
+
 export interface CanjeHistorialRow {
   codigo: string
   canjeadoEn: string

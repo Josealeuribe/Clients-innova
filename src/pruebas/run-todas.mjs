@@ -16,6 +16,7 @@ const SUITES = [
   '05-auditoria.pruebas.mjs',
   '06-vigencia-y-codigos.pruebas.mjs',
   '07-limite-giros-y-ubicaciones.pruebas.mjs',
+  '08-cajeras-independientes.pruebas.mjs',
 ]
 
 async function estadoDelBackend() {

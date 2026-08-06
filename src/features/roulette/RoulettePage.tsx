@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { X, CircleCheck, Lock } from 'lucide-react'
+import { X, CircleCheck, Lock, Info } from 'lucide-react'
 import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
 import Footer from '@/shared/components/Footer'
@@ -405,6 +405,26 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         <p className="text-[#9A7B50] mt-2 text-sm max-w-sm mx-auto">
           Presiona el botón, gira la ruleta y descubre el beneficio que tenemos para ti.
         </p>
+
+        {/* La regla se dice ANTES de girar, no cuando ya se agotaron los
+            intentos: el jugador debe saber a qué atenerse desde el principio. */}
+        {!cliente && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/8 px-4 py-1.5">
+            <Info size={13} className="text-[#D4AF37] flex-shrink-0" />
+            <span className="text-xs text-[#C4A97A]">
+              {restantes === null || maximo === null ? (
+                'Tienes 3 intentos en total'
+              ) : restantes === 0 ? (
+                <span className="text-[#eab308]">Usaste tus {maximo} intentos</span>
+              ) : (
+                <>
+                  Tienes <strong className="text-[#D4AF37]">{maximo} intentos</strong> en total ·{' '}
+                  {restantes === 1 ? 'te queda 1' : `te quedan ${restantes}`}
+                </>
+              )}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* La ruleta ya no usa SVG ni rotateX. La profundidad proviene de geometría real. */}
@@ -449,12 +469,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         {spinError && <p className="mt-3 text-red-400 text-xs">{spinError}</p>}
 
         <p className="mt-3 text-[#6B5D3F] text-xs">
-          {cliente
-            ? 'Un bono por persona · la ruleta es para nuevos jugadores'
-            : restantes !== null && maximo !== null
-            ? `Te ${restantes === 1 ? 'queda' : 'quedan'} ${restantes} de ${maximo} giros`
-            : 'Un bono por persona'}{' '}
-          ·{' '}
+          {cliente ? 'La ruleta es para nuevos jugadores' : 'Un bono por persona'} ·{' '}
           <button
             type="button"
             onClick={() => navigate('terms')}

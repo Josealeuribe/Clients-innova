@@ -6,7 +6,7 @@ import type {
   SpinResponse,
   AdminClienteRow,
   CanjePreview,
-  CanjeHistorialRow,
+  HistorialResponse,
   BusquedaPorDocumento,
   AdminCanjeRow,
   GirosRestantes,
@@ -136,5 +136,5 @@ export function cajeroConfirmarCanje(token: string, codigo: string) {
 }
 
 export function cajeroFetchHistorial(token: string) {
-  return request<{ canjes: CanjeHistorialRow[] }>('/cajero/historial', { headers: authHeaders(token) })
+  return request<HistorialResponse>('/cajero/historial', { headers: authHeaders(token) })
 }

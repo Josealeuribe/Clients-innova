@@ -23,6 +23,8 @@ import imageCarrousel2 from '@/shared/assets/images/imagen-carroussel-2.avif'
 import { MarqueeBanner } from '@/features/banner/MarqueeBanner';
 import imagenCucuta from '@/shared/assets/images/imagen-casino-cucuta-1.jpg'
 import imagenCucuta2 from '@/shared/assets/images/imagen-casino-cucuta-2.jpg'
+import imagenCucuta5  from '@/shared/assets/images/imagen-casino-cucuta-5.jpg'
+import imagenCucuta6 from '@/shared/assets/images/gran-casino-cucuta-6.jpg'
 
 const VENUE_VIDEOS = [
   { title: 'Gran Casino Cúcuta No. 2 · Ventura Plaza', src: venturaVideo },
@@ -86,7 +88,7 @@ const FEATURE_CARDS: { label: string; image: string; action: (navigate: Props['n
 ]
 
 // Fotos provisionales de sedes — se reemplazarán por fotografía real de cada casino.
-const VENUE_PHOTOS = [casinoFloorImg, casinoFloorImg2, casinoFloorImg]
+const VENUE_PHOTOS = [imagenCucuta6, imagenCucuta5, casinoFloorImg]
 
 function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (

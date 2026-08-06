@@ -21,7 +21,7 @@ type CajeroSection = 'canjear' | 'buscar' | 'historial'
 const NAV_ITEMS = [
   { id: 'canjear' as CajeroSection, label: 'Canjear Código', icon: Gift },
   { id: 'buscar' as CajeroSection, label: 'Buscar por Cédula', icon: IdCard },
-  { id: 'historial' as CajeroSection, label: 'Historial de Canjes', icon: History },
+  { id: 'historial' as CajeroSection, label: 'Mis Canjes', icon: History },
 ]
 
 function formatDateTime(iso: string) {
@@ -46,6 +46,9 @@ export default function CajeroPage({ navigate }: Props) {
 
   const [historial, setHistorial] = useState<CanjeHistorialRow[] | null>(null)
   const [historialError, setHistorialError] = useState<string | null>(null)
+  // El backend decide el alcance según el rol: una cajera solo recibe sus
+  // propios canjes, un admin los recibe todos.
+  const [soloPropios, setSoloPropios] = useState(true)
 
 
   // --- Búsqueda por documento (cliente que llegó sin código) ---
@@ -101,7 +104,10 @@ export default function CajeroPage({ navigate }: Props) {
   useEffect(() => {
     if (section !== 'historial' || !token || historial) return
     cajeroFetchHistorial(token)
-      .then((res) => setHistorial(res.canjes))
+      .then((res) => {
+        setHistorial(res.canjes)
+        setSoloPropios(res.soloPropios)
+      })
       .catch((err) => setHistorialError(err instanceof ApiError ? err.message : 'No se pudo cargar el historial.'))
   }, [section, token, historial])
 
@@ -421,8 +427,16 @@ export default function CajeroPage({ navigate }: Props) {
       {section === 'historial' && (
         <div style={{ animation: 'slide-up 0.4s ease-out forwards' }}>
           <div className="mb-6">
-            <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>Historial de Canjes</h2>
-            <p className="text-sm text-[#9A7B50] mt-1">{historial ? `${historial.length} bonos canjeados en total` : 'Cargando...'}</p>
+            <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              {soloPropios ? 'Mis canjes' : 'Todos los canjes'}
+            </h2>
+            <p className="text-sm text-[#9A7B50] mt-1">
+              {historial
+                ? soloPropios
+                  ? `${historial.length} ${historial.length === 1 ? 'bono entregado' : 'bonos entregados'} por ti`
+                  : `${historial.length} bonos entregados en total`
+                : 'Cargando...'}
+            </p>
           </div>
 
           {historialError && (
@@ -446,7 +460,7 @@ export default function CajeroPage({ navigate }: Props) {
                     <th className="px-4 py-3 font-medium">Premio</th>
                     <th className="px-4 py-3 font-medium">Cliente</th>
                     <th className="px-4 py-3 font-medium">Sede</th>
-                    <th className="px-4 py-3 font-medium">Canjeado por</th>
+                    {!soloPropios && <th className="px-4 py-3 font-medium">Canjeado por</th>}
                     <th className="px-4 py-3 font-medium">Fecha</th>
                   </tr>
                 </thead>
@@ -457,14 +471,16 @@ export default function CajeroPage({ navigate }: Props) {
                       <td className="px-4 py-3 text-[#C4A97A] whitespace-nowrap">{h.premio.nombre}</td>
                       <td className="px-4 py-3 text-[#F5E6C8] whitespace-nowrap">{h.cliente.nombres} {h.cliente.apellidos}<br /><span className="text-xs text-[#6B5D3F]">{h.cliente.docNumero}</span></td>
                       <td className="px-4 py-3 text-[#C4A97A] whitespace-nowrap">{h.sede || '—'}</td>
-                      <td className="px-4 py-3 text-[#9A7B50] whitespace-nowrap">{h.canjeadoPor || '—'}</td>
+                      {!soloPropios && (
+                        <td className="px-4 py-3 text-[#9A7B50] whitespace-nowrap">{h.canjeadoPor || '—'}</td>
+                      )}
                       <td className="px-4 py-3 text-[#6B5D3F] whitespace-nowrap">{h.canjeadoEn ? formatDateTime(h.canjeadoEn) : '—'}</td>
                     </tr>
                   ))}
                   {historial.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-[#6B5D3F] text-sm">
-                        Aún no se ha canjeado ningún bono.
+                      <td colSpan={soloPropios ? 5 : 6} className="px-4 py-10 text-center text-[#6B5D3F] text-sm">
+                        {soloPropios ? 'Todavía no has entregado ningún bono.' : 'Aún no se ha canjeado ningún bono.'}
                       </td>
                     </tr>
                   )}
