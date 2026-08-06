@@ -68,6 +68,22 @@ export type MeResponse =
 export interface SpinResponse {
   premio: PremioInfo
   ticket: string
+  usados: number
+  maximo: number
+  restantes: number
+}
+
+// Control de giros por visitante. El conteo lo lleva el servidor contra una
+// cookie httpOnly, así que recargar la página no lo reinicia.
+export interface GirosRestantes {
+  usados: number
+  maximo: number
+  restantes: number
+}
+
+export interface DepartamentoApi {
+  nombre: string
+  municipios: string[]
 }
 
 export interface RegisterPayload {

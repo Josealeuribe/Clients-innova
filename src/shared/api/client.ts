@@ -9,6 +9,8 @@ import type {
   CanjeHistorialRow,
   BusquedaPorDocumento,
   AdminCanjeRow,
+  GirosRestantes,
+  DepartamentoApi,
 } from './types'
 
 export class ApiError extends Error {}
@@ -43,14 +45,35 @@ function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` }
 }
 
+// Solo los endpoints de la ruleta viajan con credenciales: son los únicos que
+// usan la cookie de visitante anónimo (el límite de 3 giros). Mandarla en
+// todas las peticiones acoplaba TODA la API a que el backend tuviera
+// `credentials: true` en CORS — y mientras esa versión no esté desplegada, el
+// navegador descarta cada respuesta cross-origin y se cae la app entera.
+// Acotarlo deja el resto funcionando aunque el backend vaya un paso atrás.
+const CON_COOKIE_DE_VISITANTE: RequestInit = { credentials: 'include' }
+
 // Se manda el token si existe, aunque el endpoint sea anónimo: así el backend
 // puede rechazar el giro de un cliente que ya tiene cuenta. Sin esto la regla
 // viviría solo en el navegador.
 export function spinRoulette(token?: string | null) {
   return request<SpinResponse>('/ruleta/girar-anonimo', {
+    ...CON_COOKIE_DE_VISITANTE,
     method: 'POST',
     headers: token ? authHeaders(token) : undefined,
   })
+}
+
+// Cuántos giros le quedan al visitante. Se consulta al abrir la ruleta para
+// mostrar el contador sin gastar un giro.
+export function fetchGirosRestantes() {
+  return request<GirosRestantes>('/ruleta/giros-restantes', CON_COOKIE_DE_VISITANTE)
+}
+
+// Departamentos y municipios: los sirve el backend desde la tabla contra la
+// que además valida el registro, así no pueden desincronizarse.
+export function fetchUbicaciones() {
+  return request<{ departamentos: DepartamentoApi[] }>('/ubicaciones')
 }
 
 export function registerCliente(payload: RegisterPayload) {

@@ -3,8 +3,8 @@ import { Trophy, CircleCheck, Circle, Loader2, ArrowLeft, ArrowRight, TriangleAl
 import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
 import { useNavigation } from '@/shared/context/NavigationContext'
-import { ApiError, checkDisponibilidad } from '@/shared/api/client'
-import { NOMBRES_DEPARTAMENTOS, MUNICIPIOS_POR_DEPARTAMENTO } from '@/shared/data/colombia'
+import { ApiError, checkDisponibilidad, fetchUbicaciones } from '@/shared/api/client'
+import type { DepartamentoApi } from '@/shared/api/types'
 import { useCampoBorrador, useRegistrationDraft } from '@/shared/context/RegistrationDraftContext'
 import logoImg from '@/shared/assets/images/LOGO-CASINO.png'
 
@@ -124,11 +124,33 @@ export default function RegistrationPage({ navigate, prize, ticket }: Props) {
   const [birth, setBirth] = useCampoBorrador('birth', '')
   const [phone, setPhone] = useCampoBorrador('phone', '')
   const [docNumDisponible, setDocNumDisponible] = useState<boolean | null>(null)
+
+  // Departamentos y municipios vienen del backend, de la misma tabla contra
+  // la que valida el registro. Antes eran una constante local, así que podían
+  // desincronizarse sin que nadie se enterara.
+  const [ubicaciones, setUbicaciones] = useState<DepartamentoApi[]>([])
+  const [ubicacionesError, setUbicacionesError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchUbicaciones()
+      .then((res) => setUbicaciones(res.departamentos))
+      .catch(() =>
+        setUbicacionesError('No se pudo cargar la lista de departamentos. Revisa tu conexión y recarga la página.'),
+      )
+  }, [])
+
   const [checkingDocNum, setCheckingDocNum] = useState(false)
 
   // Step 2
   const [dept, setDept] = useCampoBorrador('dept', '')
   const [city, setCity] = useCampoBorrador('city', '')
+
+  // Derivados de las ubicaciones. Van aquí y no junto al fetch porque
+  // `municipiosDelDepartamento` lee `dept`: declararlos antes compila sin
+  // quejas (la referencia está dentro de un callback, TypeScript no puede
+  // saber que .find() lo ejecuta de inmediato) pero revienta en runtime.
+  const nombresDepartamentos = ubicaciones.map((d) => d.nombre)
+  const municipiosDelDepartamento = ubicaciones.find((d) => d.nombre === dept)?.municipios ?? []
 
   // Step 3
   const [email, setEmail] = useCampoBorrador('email', '')
@@ -419,15 +441,16 @@ export default function RegistrationPage({ navigate, prize, ticket }: Props) {
           <div className="flex flex-col gap-4">
             <Select
               label="Departamento"
-              options={NOMBRES_DEPARTAMENTOS}
+              options={nombresDepartamentos}
               value={dept}
               onChange={v => { setDept(v); setCity('') }}
-              placeholder="Selecciona un departamento..."
-              error={deptError}
+              placeholder={ubicaciones.length ? 'Selecciona un departamento...' : 'Cargando departamentos...'}
+              disabled={!ubicaciones.length}
+              error={deptError || ubicacionesError || ''}
             />
             <Select
               label="Ciudad"
-              options={dept ? MUNICIPIOS_POR_DEPARTAMENTO[dept] ?? [] : []}
+              options={municipiosDelDepartamento}
               value={city}
               onChange={setCity}
               disabled={!dept}

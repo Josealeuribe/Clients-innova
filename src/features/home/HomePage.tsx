@@ -10,6 +10,7 @@ import venturaVideo from '@/shared/assets/videos/gran-casino-ventura.mp4'
 import ruletaImg from '@/shared/assets/images/ruleta-img-modal.avif'
 import bingoImg from '@/shared/assets/images/bingo-modal.avif'
 import tragamonedasImg from '@/shared/assets/images/tragamonedas-modal.avif'
+import granCasino4 from '@/shared/assets/images/imagen-casino-cucuta-4.jpg'
 import cartasImg from '@/shared/assets/images/cartas-modal.avif'
 import ruletaDifumImg from '@/shared/assets/images/ruleta-difum.avif'
 import premiosDifumImg from '@/shared/assets/images/premios-difum.avif'
@@ -71,7 +72,7 @@ const CAROUSEL_SLIDES = [
 const GAME_CARDS: { title: string; image: string; page: Page | null }[] = [
   { title: 'Ruleta', image: ruletaImg, page: 'roulette' },
   { title: 'Bingo', image: bingoImg, page: null },
-  { title: 'Tragamonedas', image: tragamonedasImg, page: null },
+  { title: 'Tragamonedas', image: granCasino4, page: null },
   { title: 'Cartas', image: cartasImg, page: null },
 ]
 

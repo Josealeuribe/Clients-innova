@@ -15,6 +15,7 @@ const SUITES = [
   '04-un-bono-por-cliente.pruebas.mjs',
   '05-auditoria.pruebas.mjs',
   '06-vigencia-y-codigos.pruebas.mjs',
+  '07-limite-giros-y-ubicaciones.pruebas.mjs',
 ]
 
 async function backendDisponible() {

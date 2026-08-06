@@ -8,7 +8,7 @@ import { RouletteSpinCommand } from './types/roulette.types'
 import { TOTAL_POCKETS } from './constants/roulette.constants'
 import Roulette3D from './components/Roulette3D'
 import { PRIZES } from '@/shared/data/prizes'
-import { spinRoulette, ApiError } from '@/shared/api/client'
+import { spinRoulette, fetchGirosRestantes, ApiError } from '@/shared/api/client'
 import { createRouletteSound } from '@/shared/audio/rouletteSound'
 
 interface Props {
@@ -256,6 +256,27 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   const giroBloqueado = authLoading || !!cliente
   const [showYaParticipaste, setShowYaParticipaste] = useState(false)
 
+  // Giros que le quedan al visitante. El conteo lo lleva el servidor contra
+  // una cookie httpOnly, así que recargar la página NO lo reinicia. Se
+  // consulta al entrar para poder mostrarlo sin gastar un giro.
+  const [restantes, setRestantes] = useState<number | null>(null)
+  const [maximo, setMaximo] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (cliente) return // un cliente con sesión no gira: no aplica el contador
+    fetchGirosRestantes()
+      .then((r) => {
+        setRestantes(r.restantes)
+        setMaximo(r.maximo)
+      })
+      .catch(() => {
+        // Si falla, no se bloquea al usuario: el servidor rechazará el giro
+        // igual si ya no le quedan.
+      })
+  }, [cliente])
+
+  const sinGiros = restantes === 0
+
   // El sonido se crea una sola vez y se corta al desmontar, para que no siga
   // sonando si el usuario navega a otra vista a mitad del giro.
   const sonido = useRef(createRouletteSound())
@@ -273,6 +294,10 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
       if (!authLoading) setShowYaParticipaste(true)
       return
     }
+    if (sinGiros) {
+      setSpinError(`Ya usaste tus ${maximo ?? 3} giros. Regístrate para reclamar el premio que obtuviste.`)
+      return
+    }
 
     setSpinError(null)
     setIsSpinning(true)
@@ -284,9 +309,16 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
     let result
     try {
       result = await spinRoulette(token)
+      setRestantes(result.restantes)
+      setMaximo(result.maximo)
     } catch (error) {
       setIsSpinning(false)
       setSpinError(error instanceof ApiError ? error.message : 'No se pudo girar la ruleta. Intenta de nuevo.')
+      // El backend es la autoridad: si rechazó por giros agotados, se
+      // sincroniza el contador para que el botón quede coherente.
+      void fetchGirosRestantes()
+        .then((r) => setRestantes(r.restantes))
+        .catch(() => {})
       return
     }
 
@@ -389,17 +421,17 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         <button
           type="button"
           onClick={() => void spin()}
-          disabled={isSpinning || showModal}
+          disabled={isSpinning || showModal || sinGiros}
           className="px-10 py-4 rounded-full font-black text-base tracking-wide transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           style={{
             background:
-              isSpinning || giroBloqueado
+              isSpinning || giroBloqueado || sinGiros
                 ? 'linear-gradient(135deg, #8A7020, #6A5518)'
                 : 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
             color: '#0a0805',
             letterSpacing: '0.1em',
             minWidth: 250,
-            animation: isSpinning || giroBloqueado ? 'none' : 'pulse-glow 2.5s ease-in-out infinite',
+            animation: isSpinning || giroBloqueado || sinGiros ? 'none' : 'pulse-glow 2.5s ease-in-out infinite',
             transform: isSpinning ? 'scale(0.97)' : 'scale(1)',
           }}
         >
@@ -409,13 +441,20 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             ? 'Cargando...'
             : cliente
             ? 'Ya tienes cuenta'
+            : sinGiros
+            ? 'Giros agotados'
             : 'Girar Ruleta'}
         </button>
 
         {spinError && <p className="mt-3 text-red-400 text-xs">{spinError}</p>}
 
         <p className="mt-3 text-[#6B5D3F] text-xs">
-          {cliente ? 'Un bono por persona · la ruleta es para nuevos jugadores' : 'Un giro por promoción'} ·{' '}
+          {cliente
+            ? 'Un bono por persona · la ruleta es para nuevos jugadores'
+            : restantes !== null && maximo !== null
+            ? `Te ${restantes === 1 ? 'queda' : 'quedan'} ${restantes} de ${maximo} giros`
+            : 'Un bono por persona'}{' '}
+          ·{' '}
           <button
             type="button"
             onClick={() => navigate('terms')}
