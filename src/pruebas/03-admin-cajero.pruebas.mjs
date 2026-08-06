@@ -1,4 +1,4 @@
-import { api, authHeader, createSuite, registroValido, testEmail, testDocNum } from './_helpers.mjs'
+import { api, authHeader, createSuite, registrarConBonoEn } from './_helpers.mjs'
 
 const { assert, finish } = createSuite('03 - Roles de staff, canje de bonos e historial')
 
@@ -17,12 +17,9 @@ async function main() {
   assert(loginCajero.body?.tipo === 'staff' && loginCajero.body?.staff?.rol === 'cajero', 'login de cajero devuelve tipo=staff, rol=cajero')
   const cajeroToken = loginCajero.body?.token
 
-  // 2) Preparar un cliente con bono pendiente para canjear.
-  const giro = await api('/ruleta/girar-anonimo', { method: 'POST' })
-  const registro = await api('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(registroValido({ email: testEmail(), docNum: testDocNum(), ticket: giro.body.ticket })),
-  })
+  // 2) Cliente con bono pendiente EN LA SEDE DEL CAJERO: el bono solo se
+  //    redime en su casino asignado, así que uno de otra sede no serviría.
+  const registro = await registrarConBonoEn(loginCajero.body.staff.sede.clave)
   const clienteToken = registro.body.token
   assert(!!registro.body?.bono, 'el cliente de prueba queda con un bono pendiente que canjear')
   const codigo = registro.body.bono.codigo

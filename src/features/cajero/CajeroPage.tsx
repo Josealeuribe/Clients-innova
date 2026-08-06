@@ -127,6 +127,12 @@ export default function CajeroPage({ navigate }: Props) {
     }
   }
 
+  // El bono solo se redime en su casino. El backend lo impone; aquí se
+  // deshabilita el botón para no dejar que la cajera lo intente y reciba un
+  // error después de haberle dicho al cliente que ya estaba.
+  const esDeOtroCasino = (sedeDelBono?: { clave: string } | null) =>
+    !!staff?.sede && !!sedeDelBono && staff.sede.clave !== sedeDelBono.clave
+
   const confirmar = async () => {
     if (!token || !preview) return
     setError(null)
@@ -262,12 +268,11 @@ export default function CajeroPage({ navigate }: Props) {
                       </p>
                       <p className="text-sm text-[#F5E6C8]">{preview.sedeRedencion.nombre}</p>
                       <p className="text-xs text-[#6B5D3F]">{preview.sedeRedencion.direccion}</p>
-                      {/* El sistema no lo impide, pero sí lo advierte: el canje
-                          queda registrado en la sede de quien lo entrega. */}
-                      {staff?.sede && staff.sede.clave !== preview.sedeRedencion.clave && (
-                        <p className="mt-2 text-xs text-[#eab308] flex items-start gap-1.5">
+                      {esDeOtroCasino(preview.sedeRedencion) && (
+                        <p className="mt-2 text-xs text-red-400 flex items-start gap-1.5">
                           <TriangleAlert size={12} className="flex-shrink-0 mt-0.5" />
-                          Este bono es de otro casino. Si lo entregas, quedará registrado en {staff.sede.nombre}.
+                          Este bono pertenece a otro casino y no puede redimirse aquí. Indícale al cliente que se
+                          dirija a {preview.sedeRedencion.nombre}.
                         </p>
                       )}
                     </div>
@@ -278,9 +283,13 @@ export default function CajeroPage({ navigate }: Props) {
                   </p>
                 </div>
 
-                {preview.vencido && preview.estado === 'pendiente' ? (
+                {preview.estado === 'pendiente' && preview.vencido ? (
                   <p className="mt-4 text-center text-sm text-red-400 bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">
                     Este bono venció y ya no puede redimirse.
+                  </p>
+                ) : preview.estado === 'pendiente' && esDeOtroCasino(preview.sedeRedencion) ? (
+                  <p className="mt-4 text-center text-sm text-red-400 bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">
+                    No puedes redimir un bono de otro casino.
                   </p>
                 ) : preview.estado === 'pendiente' ? (
                   <button
@@ -410,6 +419,11 @@ export default function CajeroPage({ navigate }: Props) {
                     {encontrado.bono.vencido ? (
                       <p className="mt-4 text-center text-sm text-red-400 bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">
                         Este bono venció y ya no puede redimirse.
+                      </p>
+                    ) : esDeOtroCasino(encontrado.bono.sedeRedencion) ? (
+                      <p className="mt-4 text-center text-sm text-red-400 bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">
+                        Este bono solo puede redimirse en {encontrado.bono.sedeRedencion?.nombre}. Indícale al cliente
+                        que se dirija allí.
                       </p>
                     ) : (
                     <button

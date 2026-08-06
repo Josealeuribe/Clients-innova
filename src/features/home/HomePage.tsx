@@ -1,10 +1,10 @@
 import type { Page } from '@/shared/types/navigation'
-import { Clock, PartyPopper } from 'lucide-react'
+import { Clock, MapPin, PartyPopper } from 'lucide-react'
 import Footer from '@/shared/components/Footer'
 import BackButton from '@/shared/components/BackButton'
 import Carousel from '@/shared/components/Carousel'
 import LocationsMap from '@/shared/components/LocationsMap'
-import { VENUES, groupVenuesByCity } from '@/shared/data/locations'
+import { VENUES, comoLlegarUrl } from '@/shared/data/locations'
 import avenida5Video from '@/shared/assets/videos/gran-casino-avenida-5.mp4'
 import venturaVideo from '@/shared/assets/videos/gran-casino-ventura.mp4'
 import ruletaImg from '@/shared/assets/images/ruleta-img-modal.avif'
@@ -102,7 +102,6 @@ function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) 
 }
 
 export default function HomePage({ navigate }: Props) {
-  const cityGroups = groupVenuesByCity(VENUES)
 
   return (
     <div className="min-h-screen flex flex-col bg-transparent">
@@ -166,36 +165,38 @@ export default function HomePage({ navigate }: Props) {
         </div>
 
         <div id="sedes" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-          <SectionHeading eyebrow={`${VENUES.length} SEDES EN ${cityGroups.map((g) => g.city.toUpperCase()).join(', ')}`} title="Nuestras Sedes" />
+          <SectionHeading eyebrow={`${VENUES.length} SEDES EN CÚCUTA`} title="Nuestras Sedes" />
           <div className="grid lg:grid-cols-2 gap-8">
             <LocationsMap height={420} />
+            {/* Una tarjeta por sede, en el mismo orden que los marcadores del
+                mapa, para que se puedan cotejar de un vistazo. */}
             <div className="flex flex-col gap-4 max-h-[420px] overflow-y-auto pr-2">
-              {cityGroups.map((group) => (
+              {VENUES.map((venue) => (
                 <div
-                  key={group.city}
+                  key={venue.clave}
                   className="rounded-2xl p-5 border border-[#D4AF37]/15"
                   style={{ background: 'linear-gradient(145deg, #1C1810, #121009)' }}
                 >
-                  <h3 className="text-[#D4AF37] font-bold mb-3">{group.city}</h3>
-                  <ul className="space-y-4">
-                    {group.venues.map((venue) => (
-                      <li key={venue.name} className="text-sm text-[#9A7B50]">
-                        <p>
-                          <span className="text-[#C4A97A] font-medium">{venue.name}</span> — {venue.address}
-                        </p>
-                        <ul className="mt-1.5 space-y-0.5">
-                          {venue.schedule.map((line) => (
-                            <li key={line.days} className="text-xs text-[#6B5D3F] flex gap-2">
-                              <Clock size={13} className="text-[#D4AF37]/70 flex-shrink-0 mt-0.5" />
-                              <span>
-                                <span className="font-medium text-[#8D7A55]">{line.days}:</span> {line.hours}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
+                  <h3 className="text-[#D4AF37] font-bold">{venue.name}</h3>
+                  <p className="text-sm text-[#9A7B50] mt-0.5">{venue.address}</p>
+                  <ul className="mt-3 space-y-0.5">
+                    {venue.schedule.map((line) => (
+                      <li key={line.days} className="text-xs text-[#6B5D3F] flex gap-2">
+                        <Clock size={13} className="text-[#D4AF37]/70 flex-shrink-0 mt-0.5" />
+                        <span>
+                          <span className="font-medium text-[#8D7A55]">{line.days}:</span> {line.hours}
+                        </span>
                       </li>
                     ))}
                   </ul>
+                  <a
+                    href={comoLlegarUrl(venue)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#D4AF37] hover:text-[#F0C847] underline"
+                  >
+                    <MapPin size={13} /> Cómo llegar
+                  </a>
                 </div>
               ))}
             </div>

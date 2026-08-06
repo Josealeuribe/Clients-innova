@@ -56,6 +56,23 @@ export function createSuite(name) {
   return { assert, finish }
 }
 
+// Crea un cliente con bono pendiente ASIGNADO A LA SEDE PEDIDA.
+//
+// Desde que un bono solo se redime en su casino, no basta con generar un bono
+// cualquiera: si sale de otra sede, la cajera de la prueba no puede canjearlo
+// y el fallo no diría nada útil sobre lo que se estaba probando.
+export async function registrarConBonoEn(claveSede, intentos = 40) {
+  for (let i = 0; i < intentos; i++) {
+    const giro = await api('/ruleta/girar-anonimo', { method: 'POST' })
+    const registro = await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(registroValido({ email: testEmail(), docNum: testDocNum(), ticket: giro.body.ticket })),
+    })
+    if (registro.body?.bono?.sedeRedencion?.clave === claveSede) return registro
+  }
+  throw new Error(`No salió ningún premio de la sede "${claveSede}" en ${intentos} giros.`)
+}
+
 export function datoHace(anios) {
   const fecha = new Date()
   fecha.setFullYear(fecha.getFullYear() - anios)

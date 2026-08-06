@@ -5,14 +5,7 @@
 // tiene un bono vigente y entregárselo; y si ya lo redimió, poder decirle
 // exactamente cuándo y dónde, en vez de un "no aparece nada".
 
-import {
-  api,
-  authHeader,
-  createSuite,
-  registroValido,
-  testEmail,
-  testDocNum,
-} from './_helpers.mjs'
+import { api, authHeader, createSuite, registrarConBonoEn } from './_helpers.mjs'
 
 const { assert, finish } = createSuite('05 - Auditoría de canjes y búsqueda por documento')
 
@@ -25,15 +18,13 @@ async function main() {
   const adminToken = admin.body.token
   const cajeroToken = cajero.body.token
 
-  // Cliente con bono pendiente
-  const giro = await api('/ruleta/girar-anonimo', { method: 'POST' })
-  const docNumero = testDocNum()
-  const registro = await api('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(registroValido({ email: testEmail(), docNum: docNumero, ticket: giro.body.ticket })),
-  })
+  // Cliente con bono pendiente en la sede del cajero de pruebas: desde que el
+  // canje cruzado está prohibido, un bono de otro casino no serviría aquí.
+  const sedeDelCajero = cajero.body?.staff?.sede
+  const registro = await registrarConBonoEn(sedeDelCajero.clave)
   const clienteToken = registro.body.token
   const codigo = registro.body.bono.codigo
+  const docNumero = registro.body.cliente.docNumero
 
   // 0) Cada bono queda asignado a un casino concreto: el cliente debe saber a
   //    cuál de las 3 sedes ir, no "a cualquiera".

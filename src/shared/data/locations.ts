@@ -4,35 +4,61 @@ export interface ScheduleLine {
 }
 
 export interface Venue {
+  /** Misma clave que la tabla `sedes` del backend: enlaza esta ficha con la
+   *  sede a la que pertenecen los premios y los canjes. */
+  clave: string
   name: string
   address: string
   city: string
+  /** [latitud, longitud] del punto exacto en el mapa. */
+  coords: [number, number]
   schedule: ScheduleLine[]
 }
 
+// COORDENADAS
+//
+// Geocodificadas contra OpenStreetMap (Nominatim), no estimadas a ojo. El
+// nivel de certeza no es el mismo en las tres y conviene saberlo:
+//
+//   · ventura-plaza  El centro comercial está mapeado por nombre en OSM.
+//                    Punto confiable.
+//   · avenida-0      OSM tiene un POI etiquetado como casino justo sobre la
+//                    Avenida 0 en el Centro. Coincide con la dirección.
+//   · av-5           Punto real sobre la Avenida 5 en El Centro, pero la
+//                    numeración exacta (9-40) no está mapeada: puede estar
+//                    corrido una o dos cuadras. ES EL QUE CONVIENE VERIFICAR.
+//
+// Para corregir una: Google Maps → ubica la sede → clic derecho sobre la
+// entrada → "Copiar coordenadas" → pega el par en `coords`.
 export const VENUES: Venue[] = [
   {
-    name: 'Gran Casino Cúcuta Av 5',
-    address: 'AV 5 9 30 38 Centro',
+    clave: 'av-5',
+    name: 'Gran Casino Cúcuta Av. 5',
+    address: 'AV 5 No. 9-40',
     city: 'Cúcuta',
+    coords: [7.885395, -72.503575],
     schedule: [
       { days: 'Lunes - Viernes', hours: '8:00 a.m. - 10:00 p.m.' },
       { days: 'Domingos y Festivos', hours: '8:00 a.m. - 6:00 p.m.' },
     ],
   },
   {
-    name: 'Gran Casino Cúcuta Avenida 0',
-    address: 'AV 0 13 4 La Playa',
+    clave: 'avenida-0',
+    name: 'Gran Casino Cúcuta Av. 0',
+    address: 'Av. 0 No. 13-04',
     city: 'Cúcuta',
+    coords: [7.884325, -72.49837],
     schedule: [
       { days: 'Lunes - Sábado', hours: '11:00 a.m. - 6:00 a.m.' },
       { days: 'Domingos y Festivos', hours: '3:00 p.m. - 3:00 a.m.' },
     ],
   },
   {
-    name: 'Gran Casino Cúcuta No. 2',
-    address: 'CL 10 0 E 92 L N2 - 28 C.C Ventura Plaza',
+    clave: 'ventura-plaza',
+    name: 'Gran Casino Cúcuta Ventura Plaza',
+    address: 'C.C Ventura Plaza local 228',
     city: 'Cúcuta',
+    coords: [7.887792, -72.496673],
     schedule: [
       { days: 'Lunes - Viernes', hours: '10:00 a.m. - 1:00 a.m.' },
       { days: 'Domingos y Festivos', hours: '11:00 a.m. - 12:00 p.m.' },
@@ -40,26 +66,10 @@ export const VENUES: Venue[] = [
   },
 ]
 
-export interface CityCoord {
-  city: string
-  lat: number
-  lng: number
-}
-
-export const CITY_COORDS: CityCoord[] = [{ city: 'Cúcuta', lat: 7.8891, lng: -72.5079 }]
-
-export interface CityGroup {
-  city: string
-  lat: number
-  lng: number
-  venues: Venue[]
-}
-
-export function groupVenuesByCity(venues: Venue[]): CityGroup[] {
-  return CITY_COORDS.map(({ city, lat, lng }) => ({
-    city,
-    lat,
-    lng,
-    venues: venues.filter((venue) => venue.city === city),
-  })).filter((group) => group.venues.length > 0)
+// Enlace a Google Maps para "Cómo llegar". Se arma con las coordenadas y no
+// con la dirección en texto: el buscador de Maps a veces no acierta con
+// direcciones colombianas, pero un par de coordenadas nunca falla.
+export function comoLlegarUrl(venue: Venue): string {
+  const [lat, lng] = venue.coords
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
 }

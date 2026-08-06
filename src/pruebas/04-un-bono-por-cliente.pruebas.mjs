@@ -6,7 +6,7 @@
 // también se devuelve, pero se conserva como contrato explícito: la ruleta
 // pregunta "¿ya participó?" y no debería tener que deducirlo del estado.
 
-import { api, authHeader, createSuite, registroValido, testEmail, testDocNum } from './_helpers.mjs'
+import { api, authHeader, createSuite, registrarConBonoEn, registroValido, testEmail, testDocNum } from './_helpers.mjs'
 
 const { assert, finish } = createSuite('04 - Un bono por cliente y bloqueo del segundo giro')
 
@@ -23,11 +23,9 @@ async function main() {
   assert(sinGiro.body?.bono === null, 'un cliente que no giró no tiene bono')
 
   // 2) Cliente que giró y reclamó: queda marcado como participante
-  const giro = await api('/ruleta/girar-anonimo', { method: 'POST' })
-  const registro = await api('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(registroValido({ email: testEmail(), docNum: testDocNum(), ticket: giro.body.ticket })),
-  })
+  // El bono debe ser de la sede del cajero de pruebas (Av. 0): el canje
+  // cruzado entre casinos está prohibido.
+  const registro = await registrarConBonoEn('avenida-0')
   const clienteToken = registro.body.token
   assert(registro.body?.yaParticipo === true, 'al reclamar el premio, el registro devuelve yaParticipo=true')
   assert(registro.body?.bonoCanjeado === false, 'un bono recién ganado todavía no está canjeado')
