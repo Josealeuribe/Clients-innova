@@ -70,8 +70,10 @@ async function main() {
 
   // 4) Canje usando el código recuperado por cédula. No se envía sede: sale
   //    del casino asignado al premio.
-  const sede = busqueda.body.bono.sedeRedencion
-  assert(!!sede, 'la búsqueda por cédula dice a qué casino debe ir el cliente')
+  assert(!!busqueda.body.bono.sedeRedencion, 'la búsqueda por cédula dice a qué casino debe ir el cliente')
+  // Lo que se registra al canjear es el casino del cajero, no el del premio.
+  const sede = cajero.body?.staff?.sede
+  assert(!!sede, 'la sesión del cajero trae su casino')
   const canje = await api(`/cajero/codigo/${busqueda.body.bono.codigo}/canjear`, {
     method: 'POST',
     headers: authHeader(cajeroToken),

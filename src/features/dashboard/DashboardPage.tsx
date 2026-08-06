@@ -222,7 +222,7 @@ export default function DashboardPage({ navigate }: Props) {
                     <p className="text-[#F5E6C8] font-semibold">{bono.premio.nombre}</p>
                     <p className="text-[#9A7B50] text-xs mt-0.5">
                       {bonoRedimido
-                        ? `Entregado${bono.sede ? ` en ${bono.sede}` : ''}${bonoFechaCanje ? ` · ${bonoFechaCanje}` : ''}`
+                        ? `Entregado${bono.sede ? ` en ${bono.sede}` : ''}${bono.canjeadoPor ? ` por ${bono.canjeadoPor}` : ''}${bonoFechaCanje ? ` · ${bonoFechaCanje}` : ''}`
                         : `Código ${bono.codigo}${bono.sedeRedencion ? ` · Redímelo en ${bono.sedeRedencion.nombre}` : ''}`}
                     </p>
                   </div>
@@ -287,7 +287,8 @@ export default function DashboardPage({ navigate }: Props) {
                       </p>
                       <div className="grid gap-1 text-xs text-[#9A7B50]">
                         {bonoFechaCanje && <span>Fecha de entrega: {bonoFechaCanje}</span>}
-                        {bono.sede && <span>Sede: {bono.sede}</span>}
+                        {bono.sede && <span>Casino: {bono.sede}</span>}
+                        {bono.canjeadoPor && <span>Atendido por: {bono.canjeadoPor}</span>}
                       </div>
                       <p className="text-[10px] text-[#6B5D3F] mt-2">
                         Conserva este comprobante. Este código ya fue usado y no puede volver a redimirse.
@@ -388,6 +389,9 @@ export default function DashboardPage({ navigate }: Props) {
                         <>
                           <p className="text-sm text-[#22c55e] font-medium">Redimido correctamente</p>
                           {bono.sede && <p className="text-xs text-[#9A7B50] mt-0.5">{bono.sede}</p>}
+                          {bono.canjeadoPor && (
+                            <p className="text-xs text-[#9A7B50] mt-0.5">Atendido por {bono.canjeadoPor}</p>
+                          )}
                           <p className="text-xs text-[#6B5D3F] mt-0.5">{bonoFechaCanje}</p>
                         </>
                       ) : (

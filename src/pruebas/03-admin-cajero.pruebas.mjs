@@ -68,7 +68,11 @@ async function main() {
 
   // 9) La vista previa dice a qué casino pertenece el bono
   assert(!!preview.body?.sedeRedencion, 'la vista previa indica el casino asignado al bono')
-  const sedeAsignada = preview.body.sedeRedencion
+
+  // La sede que se REGISTRA al canjear es la del cajero, no la del premio: el
+  // bono se entregó físicamente donde está quien lo entrega.
+  const sedeDelCajero = loginCajero.body?.staff?.sede
+  assert(!!sedeDelCajero, 'la sesión del cajero trae su casino')
 
   // 10) El canje ya NO pide sede: se deduce del premio
   const canje = await api(`/cajero/codigo/${codigo}/canjear`, {
@@ -78,8 +82,8 @@ async function main() {
   assert(canje.status === 200, 'confirmar el canje sin enviar sede responde 200')
   assert(canje.body?.estado === 'reclamado', 'tras canjear, el estado pasa a "reclamado"')
   assert(
-    canje.body?.sedeCanje === sedeAsignada.nombre,
-    'la sede del canje se tomó automáticamente del casino asignado al premio',
+    canje.body?.sedeCanje === sedeDelCajero.nombre,
+    `la sede del canje es la del cajero que lo entregó (recibido: ${canje.body?.sedeCanje})`,
   )
 
   // 11) El bono NO desaparece para el cliente: queda como constancia de que
@@ -89,7 +93,7 @@ async function main() {
   assert(!!meDespues.body?.bono, 'el bono sigue visible para el cliente después del canje')
   assert(meDespues.body?.bono?.estado === 'reclamado', 'el cliente ve su bono en estado "reclamado"')
   assert(!!meDespues.body?.bono?.canjeadoEn, 'el cliente ve la fecha en que se le entregó el bono')
-  assert(meDespues.body?.bono?.sede === sedeAsignada.nombre, 'el cliente ve en qué sede se le entregó')
+  assert(meDespues.body?.bono?.sede === sedeDelCajero.nombre, 'el cliente ve en qué sede se le entregó')
 
   assert(meDespues.body?.yaParticipo === true, 'tras el canje, /auth/me sigue marcando yaParticipo=true')
   assert(meDespues.body?.bonoCanjeado === true, 'tras el canje, /auth/me marca bonoCanjeado=true')
@@ -107,13 +111,13 @@ async function main() {
   const filaHistorial = historial.body?.canjes?.find((h) => h.codigo === codigo)
   assert(!!filaHistorial, 'el canje recién hecho aparece en el historial')
   assert(filaHistorial?.canjeadoPor === 'Cajero', 'el historial registra qué cajero hizo el canje')
-  assert(filaHistorial?.sede === sedeAsignada.nombre, 'el historial registra en qué sede se entregó el bono')
+  assert(filaHistorial?.sede === sedeDelCajero.nombre, 'el historial registra en qué sede se entregó el bono')
 
   // 14) El admin ahora ve el bono como "reclamado" (a diferencia del cliente)
   const listadoDespues = await api('/admin/clientes', { headers: authHeader(adminToken) })
   const filaDespues = listadoDespues.body?.clientes?.find((c) => c.email === registro.body.cliente.email)
   assert(filaDespues?.bono?.estado === 'reclamado', 'el admin sí ve el bono como "reclamado" (vista completa, no filtrada)')
-  assert(filaDespues?.bono?.sede === sedeAsignada.nombre, 'el admin también ve la sede del canje')
+  assert(filaDespues?.bono?.sede === sedeDelCajero.nombre, 'el admin también ve la sede del canje')
 
   // 15) La vista previa del cajero trae los datos con los que se verifica al
   //     cliente contra su documento fisico antes de entregar el bono.

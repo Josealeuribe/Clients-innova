@@ -34,12 +34,17 @@ async function main() {
   assert(a.status === 200, 'Alisson puede iniciar sesión')
   assert(a.staff?.rol === 'cajero', 'entra con rol de cajero')
   assert(a.staff?.nombre === 'Alisson Nicole Céspedes Figueroa', 'su nombre completo queda en la sesión')
+  assert(a.staff?.sede?.clave === 'avenida-0', 'Alisson pertenece a Gran Casino Cúcuta Av. 0')
+  assert(!!a.staff?.sede?.direccion, 'la sesión trae la dirección del casino, para mostrarla en el panel')
 
   const b = await entrar(CAJERA_B)
   assert(b.status === 200, 'Lesly puede iniciar sesión')
 
+  assert(b.staff?.sede?.clave === 'avenida-0', 'Lesly también es de Av. 0')
+
   const admin = await entrar(ADMIN)
   assert(admin.status === 200, 'el admin sigue entrando')
+  assert(admin.staff?.sede === null, 'el admin no pertenece a un casino concreto')
 
   // 2) Cada una canjea un bono distinto
   const codigoA = await bonoNuevo()
@@ -50,6 +55,15 @@ async function main() {
 
   const canjeB = await api(`/cajero/codigo/${codigoB}/canjear`, { method: 'POST', headers: authHeader(b.token) })
   assert(canjeB.status === 200, 'Lesly canjea el suyo')
+
+  // 2b) La sede registrada es la de la CAJERA, no la del premio. Los premios
+  //     se reparten entre los 3 casinos, pero quien entrega está en Av. 0, así
+  //     que ahí es donde se entregó de verdad.
+  assert(
+    canjeA.body?.sedeCanje === 'Gran Casino Cúcuta Av. 0',
+    `el canje queda registrado en el casino de la cajera (recibido: ${canjeA.body?.sedeCanje})`,
+  )
+  assert(canjeA.body?.canjeadoPor === 'Alisson Nicole Céspedes Figueroa', 'y a nombre de quien lo entregó')
 
   // 3) Aislamiento: cada una ve el suyo y NO el de la otra
   const histA = await api('/cajero/historial', { headers: authHeader(a.token) })
@@ -74,6 +88,23 @@ async function main() {
   assert(!!filaA && !!filaB, 'el admin ve los canjes de ambas cajeras')
   assert(filaA.canjeadoPor === 'Alisson Nicole Céspedes Figueroa', 'la auditoría nombra a quien entregó el primero')
   assert(filaB.canjeadoPor === 'Lesly Viviana Naranjo Gordillo', 'y a quien entregó el segundo')
+
+  // 4b) El CLIENTE también ve dónde y quién se lo entregó, en su comprobante
+  const clienteA = await api('/cajero/cliente/' + filaA.cliente.docNumero, { headers: authHeader(a.token) })
+  const login = await api('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ identifier: clienteA.body.cliente.email, password: 'Passw0rd' }),
+  })
+  assert(login.body?.bono?.sede === 'Gran Casino Cúcuta Av. 0', 'el cliente ve en qué casino se lo entregaron')
+  assert(
+    login.body?.bono?.canjeadoPor === 'Alisson Nicole Céspedes Figueroa',
+    'el cliente ve quién se lo entregó',
+  )
+
+  // 4c) La auditoría del admin distingue el casino ASIGNADO del casino donde
+  //     realmente se entregó. Si difieren, el bono se redimió en otra sede.
+  assert(!!filaA.sede, 'la auditoría dice dónde se entregó')
+  assert('sedeRedencion' in filaA, 'la auditoría también trae el casino asignado al premio')
 
   // 5) Una cajera no puede asomarse a la auditoría completa
   const cajeraEnAuditoria = await api('/admin/canjes', { headers: authHeader(a.token) })

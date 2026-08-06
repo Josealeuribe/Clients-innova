@@ -14,6 +14,8 @@ export interface StaffSafe {
   nombre: string
   email: string
   rol: 'admin' | 'cajero'
+  /** Casino donde trabaja. Null para el admin, que no pertenece a uno. */
+  sede: Sede | null
 }
 
 export interface PremioInfo {
@@ -34,8 +36,10 @@ export interface BonoInfo {
   vigenciaHasta: string
   /** Casino al que el cliente debe ir a redimir: viene del premio. */
   sedeRedencion: Sede | null
-  /** Casino donde realmente se redimió. Null mientras esté pendiente. */
+  /** Casino donde realmente se redimió: el de quien lo entregó. */
   sede: string | null
+  /** Quién lo entregó. Va en el comprobante del cliente. */
+  canjeadoPor: string | null
   premio: PremioInfo
 }
 
@@ -160,6 +164,7 @@ export interface CanjePreview {
     registradoEn: string
   }
   sedeCanje: string | null
+  canjeadoPor: string | null
   sedeRedencion: Sede | null
 }
 

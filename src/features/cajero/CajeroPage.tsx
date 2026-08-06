@@ -154,6 +154,21 @@ export default function CajeroPage({ navigate }: Props) {
       activeSection={section}
       onSectionChange={(id) => setSection(id as CajeroSection)}
     >
+      {/* En qué casino está trabajando. Siempre visible: es el dato que queda
+          registrado en cada canje que ella confirme. */}
+      {staff?.sede && (
+        <div className="mb-6 flex items-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/6 px-4 py-2.5">
+          <Building2 size={15} className="text-[#D4AF37] flex-shrink-0" />
+          <div className="min-w-0">
+            <span className="text-sm text-[#F5E6C8] font-medium">{staff.sede.nombre}</span>
+            <span className="text-xs text-[#6B5D3F] ml-2">{staff.sede.direccion}</span>
+          </div>
+          <span className="ml-auto text-[10px] text-[#6B5D3F] whitespace-nowrap hidden sm:block">
+            Los canjes quedan a nombre de esta sede
+          </span>
+        </div>
+      )}
+
       {/* CANJEAR */}
       {section === 'canjear' && (
         <div className="flex justify-center" style={{ animation: 'slide-up 0.4s ease-out forwards' }}>
@@ -235,12 +250,26 @@ export default function CajeroPage({ navigate }: Props) {
                     confirmar antes de entregar. */}
                 <div className="mt-5 grid gap-2">
                   {preview.sedeRedencion && (
-                    <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/6 px-4 py-3">
+                    <div
+                      className={`rounded-xl border px-4 py-3 ${
+                        staff?.sede && staff.sede.clave !== preview.sedeRedencion.clave
+                          ? 'border-[#eab308]/40 bg-[#eab308]/8'
+                          : 'border-[#D4AF37]/20 bg-[#D4AF37]/6'
+                      }`}
+                    >
                       <p className="text-[10px] text-[#D4AF37] font-bold tracking-wider mb-1 flex items-center gap-1.5">
                         <Building2 size={12} /> CASINO ASIGNADO
                       </p>
                       <p className="text-sm text-[#F5E6C8]">{preview.sedeRedencion.nombre}</p>
                       <p className="text-xs text-[#6B5D3F]">{preview.sedeRedencion.direccion}</p>
+                      {/* El sistema no lo impide, pero sí lo advierte: el canje
+                          queda registrado en la sede de quien lo entrega. */}
+                      {staff?.sede && staff.sede.clave !== preview.sedeRedencion.clave && (
+                        <p className="mt-2 text-xs text-[#eab308] flex items-start gap-1.5">
+                          <TriangleAlert size={12} className="flex-shrink-0 mt-0.5" />
+                          Este bono es de otro casino. Si lo entregas, quedará registrado en {staff.sede.nombre}.
+                        </p>
+                      )}
                     </div>
                   )}
                   <p className={`text-xs ${preview.vencido ? 'text-red-400' : 'text-[#6B5D3F]'}`}>

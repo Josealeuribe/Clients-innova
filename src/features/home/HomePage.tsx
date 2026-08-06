@@ -25,6 +25,7 @@ import imagenCucuta from '@/shared/assets/images/imagen-casino-cucuta-1.jpg'
 import imagenCucuta2 from '@/shared/assets/images/imagen-casino-cucuta-2.jpg'
 import imagenCucuta5  from '@/shared/assets/images/imagen-casino-cucuta-5.jpg'
 import imagenCucuta6 from '@/shared/assets/images/gran-casino-cucuta-6.jpg'
+import imagenCucuta3 from '@/shared/assets/images/imagen-casino-cucuta-3.jpg'
 
 const VENUE_VIDEOS = [
   { title: 'Gran Casino Cúcuta No. 2 · Ventura Plaza', src: venturaVideo },
@@ -42,7 +43,7 @@ const CAROUSEL_SLIDES = [
     title: 'Vive la Experiencia Gran Casino',
     subtitle:
       'Descubre en Cúcuta un lugar creado para disfrutar, compartir y vivir momentos llenos de emoción. Atrévete a visitarnos y haz parte de nuestra comunidad.',
-    image: imagenCucuta,
+    image: imagenCucuta5,
     gradient: 'linear-gradient(135deg, #3D006B, #7B1515)',
   },
   {
@@ -65,7 +66,7 @@ const CAROUSEL_SLIDES = [
     title: 'Siente la Emoción del Bingo en Vivo',
     subtitle:
       'Disfruta cada número, comparte la emoción y participa en jornadas de bingo con grandes premios y experiencias pensadas para nuestros socios.',
-    image: bingoImg,
+    image: imagenCucuta,
     gradient: 'linear-gradient(135deg, #002B70, #3D006B)',
   },
 
@@ -88,7 +89,7 @@ const FEATURE_CARDS: { label: string; image: string; action: (navigate: Props['n
 ]
 
 // Fotos provisionales de sedes — se reemplazarán por fotografía real de cada casino.
-const VENUE_PHOTOS = [imagenCucuta6, imagenCucuta5, casinoFloorImg]
+const VENUE_PHOTOS = [imagenCucuta6, imagenCucuta5, imagenCucuta3 ]
 
 function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
