@@ -1,4 +1,4 @@
-import { Gift, RotateCw, Layers, Ticket, Trophy, PartyPopper, Coins, Banknote, type LucideIcon } from 'lucide-react'
+import { Gift, Layers, Ticket, Trophy, PartyPopper, Coins, Banknote, type LucideIcon } from 'lucide-react'
 
 export interface RoulettePrize {
   // Debe coincidir con el campo `clave` sembrado en server/prisma/seed.ts:
@@ -54,18 +54,6 @@ export const PRIZES: RoulettePrize[] = [
     detail: 'Bono redimible en cualquiera de nuestras 3 sedes al completar tu registro.',
     monetary: true,
     weight: 20,
-  },
-  {
-    clave: 'giro-extra',
-    label: 'Giro',
-    sublabel: 'Extra',
-    color: '#002B70',
-    lightColor: '#004FCC',
-    prize: 'Giro Adicional en la Ruleta',
-    icon: RotateCw,
-    detail: 'Vuelve a girar y gana otro premio.',
-    monetary: false,
-    weight: 10,
   },
   {
     clave: 'carton-bingo',

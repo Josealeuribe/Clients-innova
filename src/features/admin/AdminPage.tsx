@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
-import { adminFetchClientes, ApiError } from '@/shared/api/client'
-import type { AdminClienteRow } from '@/shared/api/types'
+import { adminFetchCanjes, adminFetchClientes, ApiError } from '@/shared/api/client'
+import type { AdminCanjeRow, AdminClienteRow } from '@/shared/api/types'
 import StaffSidebarLayout from '@/shared/components/StaffSidebarLayout'
-import { LayoutDashboard, Users, Search, Loader2, Gift, CircleCheck, Clock } from 'lucide-react'
+import { LayoutDashboard, Users, Search, Loader2, Gift, CircleCheck, Clock, ClipboardList } from 'lucide-react'
 
 interface Props {
   navigate: (page: Page) => void
 }
 
-type AdminSection = 'overview' | 'clientes'
+type AdminSection = 'overview' | 'clientes' | 'canjes'
 
 const NAV_ITEMS = [
   { id: 'overview' as AdminSection, label: 'Vista General', icon: LayoutDashboard },
   { id: 'clientes' as AdminSection, label: 'Clientes', icon: Users },
+  { id: 'canjes' as AdminSection, label: 'Auditoría de Canjes', icon: ClipboardList },
 ]
 
 function StatusBadge({ label, color }: { label: string; color: string }) {
@@ -30,12 +31,50 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('es-CO', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
+}
+
+// Horas transcurridas entre ganar el bono y redimirlo, en formato legible.
+function formatDemora(horas: number | null) {
+  if (horas == null) return '—'
+  if (horas < 1) return `${Math.round(horas * 60)} min`
+  if (horas < 48) return `${horas} h`
+  return `${Math.round(horas / 24)} días`
+}
+
 export default function AdminPage({ navigate }: Props) {
   const { staff, token, loading: authLoading } = useAuth()
   const [section, setSection] = useState<AdminSection>('overview')
   const [clientes, setClientes] = useState<AdminClienteRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+
+  // Auditoría de canjes: se carga solo al abrir la sección, no en cada visita
+  // al panel.
+  const [canjes, setCanjes] = useState<AdminCanjeRow[] | null>(null)
+  const [canjesError, setCanjesError] = useState<string | null>(null)
+  const [searchCanje, setSearchCanje] = useState('')
+
+  useEffect(() => {
+    if (section !== 'canjes' || !token || canjes) return
+    adminFetchCanjes(token)
+      .then((res) => setCanjes(res.canjes))
+      .catch((err) => setCanjesError(err instanceof ApiError ? err.message : 'No se pudo cargar la auditoría.'))
+  }, [section, token, canjes])
+
+  const canjesFiltrados = useMemo(() => {
+    if (!canjes) return []
+    const q = searchCanje.trim().toLowerCase()
+    if (!q) return canjes
+    return canjes.filter((c) =>
+      `${c.cliente.nombres} ${c.cliente.apellidos} ${c.cliente.docNumero} ${c.codigo} ${c.sede ?? ''} ${c.canjeadoPor ?? ''}`
+        .toLowerCase()
+        .includes(q),
+    )
+  }, [canjes, searchCanje])
 
   useEffect(() => {
     if (authLoading) return
@@ -224,6 +263,89 @@ export default function AdminPage({ navigate }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* AUDITORÍA DE CANJES — quién entregó qué, a quién, cuándo y dónde */}
+      {section === 'canjes' && (
+        <div style={{ animation: 'slide-up 0.4s ease-out forwards' }}>
+          <div className="mb-6">
+            <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>Auditoría de Canjes</h2>
+            <p className="text-sm text-[#9A7B50] mt-1">
+              {canjes ? `${canjes.length} bonos entregados en total` : 'Cargando...'}
+            </p>
+          </div>
+
+          {canjesError && (
+            <p className="text-red-400 text-sm text-center bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3 mb-6">
+              {canjesError}
+            </p>
+          )}
+
+          {!canjes && !canjesError && (
+            <div className="flex items-center justify-center gap-2 text-[#9A7B50] py-20">
+              <Loader2 size={20} className="animate-spin" /> Cargando auditoría...
+            </div>
+          )}
+
+          {canjes && (
+            <>
+              <div className="relative mb-4">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B5D3F]" />
+                <input
+                  type="text"
+                  placeholder="Buscar por cliente, cédula, código, sede o cajero..."
+                  value={searchCanje}
+                  onChange={(e) => setSearchCanje(e.target.value)}
+                  className="w-full pl-9 pr-4 py-3 rounded-xl text-sm text-[#F5E6C8] bg-[#121009] border border-[#D4AF37]/20 outline-none placeholder:text-[#4A3D28] focus:border-[#D4AF37]/60"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-[#D4AF37]/12 overflow-x-auto" style={{ background: '#121009' }}>
+                <table className="w-full text-sm min-w-[900px]">
+                  <thead>
+                    <tr className="text-left text-xs text-[#6B5D3F] border-b border-[#D4AF37]/12">
+                      <th className="px-4 py-3 font-medium">Código</th>
+                      <th className="px-4 py-3 font-medium">Cliente</th>
+                      <th className="px-4 py-3 font-medium">Premio</th>
+                      <th className="px-4 py-3 font-medium">Sede</th>
+                      <th className="px-4 py-3 font-medium">Cajero</th>
+                      <th className="px-4 py-3 font-medium">Entregado</th>
+                      <th className="px-4 py-3 font-medium">Demora</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {canjesFiltrados.map((c) => (
+                      <tr key={c.codigo} className="border-b border-[#D4AF37]/8 last:border-0">
+                        <td className="px-4 py-3 text-[#D4AF37] font-mono whitespace-nowrap">{c.codigo}</td>
+                        <td className="px-4 py-3 text-[#F5E6C8] whitespace-nowrap">
+                          {c.cliente.nombres} {c.cliente.apellidos}
+                          <br />
+                          <span className="text-xs text-[#6B5D3F]">{c.cliente.docTipo}: {c.cliente.docNumero}</span>
+                        </td>
+                        <td className="px-4 py-3 text-[#C4A97A] whitespace-nowrap">{c.premio.nombre}</td>
+                        <td className="px-4 py-3 text-[#C4A97A] whitespace-nowrap">{c.sede || '—'}</td>
+                        <td className="px-4 py-3 text-[#9A7B50] whitespace-nowrap">{c.canjeadoPor || '—'}</td>
+                        <td className="px-4 py-3 text-[#6B5D3F] whitespace-nowrap">
+                          {c.canjeadoEn ? formatDateTime(c.canjeadoEn) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-[#6B5D3F] whitespace-nowrap">{formatDemora(c.horasHastaCanje)}</td>
+                      </tr>
+                    ))}
+                    {canjesFiltrados.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-10 text-center text-[#6B5D3F] text-sm">
+                          {canjes.length === 0
+                            ? 'Todavía no se ha entregado ningún bono.'
+                            : 'No se encontraron canjes con ese criterio.'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
     </StaffSidebarLayout>

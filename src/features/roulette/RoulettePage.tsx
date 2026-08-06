@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { X, CircleCheck, Lock } from 'lucide-react'
 import type { Page } from '@/shared/types/navigation'
+import { useAuth } from '@/shared/context/AuthContext'
 import Footer from '@/shared/components/Footer'
 import BackButton from '@/shared/components/BackButton'
 import { RouletteSpinCommand } from './types/roulette.types'
@@ -8,6 +9,7 @@ import { TOTAL_POCKETS } from './constants/roulette.constants'
 import Roulette3D from './components/Roulette3D'
 import { PRIZES } from '@/shared/data/prizes'
 import { spinRoulette, ApiError } from '@/shared/api/client'
+import { createRouletteSound } from '@/shared/audio/rouletteSound'
 
 interface Props {
   navigate: (page: Page) => void
@@ -138,6 +140,98 @@ function PrizeModal({ segmentIndex, onClaim, onClose }: PrizeModalProps) {
   )
 }
 
+interface YaParticipasteModalProps {
+  tieneBono: boolean
+  bonoCanjeado: boolean
+  codigo: string | null
+  onClose: () => void
+  onVerCuenta: () => void
+}
+
+// La promocion da un unico bono por persona (BonoGanado.clienteId es @unique
+// en la base). Si el cliente que tiene la sesion abierta ya lo obtuvo, la
+// ruleta no vuelve a girar: se le explica por que en vez de dejarlo girar y
+// fallar despues al reclamar.
+function YaParticipasteModal({ tieneBono, bonoCanjeado, codigo, onClose, onVerCuenta }: YaParticipasteModalProps) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.82)' }}>
+      <div
+        className="relative max-w-md w-full rounded-3xl border border-[#D4AF37]/40 p-8 text-center"
+        style={{
+          background: 'linear-gradient(145deg, #1C1810 0%, #121009 100%)',
+          animation: 'modal-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards',
+          boxShadow: '0 0 60px rgba(212,175,55,0.2), 0 30px 80px rgba(0,0,0,0.6)',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar modal"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full border border-[#D4AF37]/25 flex items-center justify-center text-[#9A7B50] hover:text-[#D4AF37] hover:border-[#D4AF37]/50 transition-all"
+        >
+          <X size={16} />
+        </button>
+
+        <div className="mb-3 flex items-center justify-center">
+          {bonoCanjeado ? (
+            <CircleCheck size={64} className="text-[#D4AF37]" style={{ filter: 'drop-shadow(0 0 20px rgba(212,175,55,0.45))' }} />
+          ) : (
+            <Lock size={64} className="text-[#D4AF37]" style={{ filter: 'drop-shadow(0 0 20px rgba(212,175,55,0.45))' }} />
+          )}
+        </div>
+
+        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2">YA PARTICIPASTE</p>
+        <h2 className="text-2xl md:text-3xl font-black text-[#F5E6C8] mb-3 leading-tight">
+          {!tieneBono ? 'La ruleta es para nuevos jugadores' : bonoCanjeado ? 'Ya redimiste tu bono' : 'Ya tienes tu bono'}
+        </h2>
+
+        <div className="bg-[#D4AF37]/8 border border-[#D4AF37]/20 rounded-xl p-4 mb-6 text-sm text-[#C4A97A]">
+          {!tieneBono ? (
+            <>
+              Tu cuenta ya está creada, así que la promoción de bienvenida no aplica: la ruleta es únicamente para
+              quienes todavía no están registrados. Consulta tus beneficios activos desde tu cuenta.
+            </>
+          ) : bonoCanjeado ? (
+            <>
+              Este premio ya fue entregado en la sede correspondiente. La promoción de bienvenida es de un solo bono por
+              persona, así que la ruleta ya no está disponible para tu cuenta.
+            </>
+          ) : (
+            <>
+              Tu bono sigue reservado y pendiente de reclamar. La promoción entrega un único bono por persona, por eso
+              no puedes volver a girar.
+              {codigo && (
+                <span className="block mt-3 font-mono tracking-widest text-[#D4AF37] text-base">{codigo}</span>
+              )}
+            </>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onVerCuenta}
+          className="w-full py-4 rounded-xl font-bold text-[#0a0805] transition-all hover:scale-[1.02] active:scale-[0.98] mb-3"
+          style={{ background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)', letterSpacing: '0.06em' }}
+        >
+          Ver mi cuenta
+        </button>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-2.5 rounded-xl text-sm text-[#9A7B50] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 hover:text-[#C4A97A] transition-all"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// La ruleta debe girar al menos 5 segundos. Se dejan 5.8 para que la caída de
+// la bola y sus rebotes finales se alcancen a apreciar sin que se haga largo.
+const DURACION_GIRO_MS = 5800
+
 export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   const [isSpinning, setIsSpinning] = useState(false)
   const [wonPrizeIdx, setWonPrizeIdx] = useState<number | null>(null)
@@ -148,8 +242,37 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   const [spinCommand, setSpinCommand] = useState<RouletteSpinCommand | null>(null)
   const [spinError, setSpinError] = useState<string | null>(null)
 
+  const { cliente, bono, bonoCanjeado, token, loading: authLoading } = useAuth()
+
+  // La ruleta es SOLO para visitantes sin cuenta: es una promocion de
+  // captacion. Cualquier cliente con la sesion abierta queda bloqueado, tenga
+  // bono o no. Antes se exigia ademas `yaParticipo`, y eso dejaba pasar al
+  // cliente registrado sin bono, que giraba y despues no tenia como reclamar
+  // (el reclamo pasa por el registro, y su correo ya existia).
+  //
+  // Se bloquea tambien mientras la sesion se esta restaurando: hasta que /me
+  // responde no sabemos si hay cliente detras, y sin esto un clic rapido al
+  // entrar directo a /ruleta se colaba antes de la respuesta.
+  const giroBloqueado = authLoading || !!cliente
+  const [showYaParticipaste, setShowYaParticipaste] = useState(false)
+
+  // El sonido se crea una sola vez y se corta al desmontar, para que no siga
+  // sonando si el usuario navega a otra vista a mitad del giro.
+  const sonido = useRef(createRouletteSound())
+  useEffect(() => {
+    const actual = sonido.current
+    return () => actual.stop()
+  }, [])
+
   const spin = async () => {
     if (isSpinning || showModal) return
+
+    // Se corta antes de llamar al backend. Mientras carga la sesion no se
+    // abre el modal: todavia no hay nada que explicarle al usuario.
+    if (giroBloqueado) {
+      if (!authLoading) setShowYaParticipaste(true)
+      return
+    }
 
     setSpinError(null)
     setIsSpinning(true)
@@ -160,7 +283,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
     // visualmente la ruleta 3D (es decorativo, no revela ni afecta el premio).
     let result
     try {
-      result = await spinRoulette()
+      result = await spinRoulette(token)
     } catch (error) {
       setIsSpinning(false)
       setSpinError(error instanceof ApiError ? error.message : 'No se pudo girar la ruleta. Intenta de nuevo.')
@@ -175,10 +298,15 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
     setPrizeTicket(result.ticket)
     setShowModal(false)
 
+    // El sonido se dispara con el mismo comando que la animación para que
+    // vayan sincronizados. Va dentro del clic, que es el gesto de usuario que
+    // los navegadores exigen para permitir audio.
+    sonido.current.spin(DURACION_GIRO_MS)
+
     setSpinCommand({
       id: Date.now(),
       targetPocket,
-      durationMs: 5600,
+      durationMs: DURACION_GIRO_MS,
     })
   }
 
@@ -188,6 +316,7 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
     setIsSpinning(false)
     setWonPrizeIdx(pendingPrizeIdx)
     setShowConfetti(true)
+    sonido.current.win()
 
     window.setTimeout(() => setShowModal(true), 500)
     window.setTimeout(() => setShowConfetti(false), 4000)
@@ -210,6 +339,18 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
       }}
     >
       {showConfetti && <Confetti />}
+      {showYaParticipaste && (
+        <YaParticipasteModal
+          tieneBono={!!bono}
+          bonoCanjeado={bonoCanjeado}
+          codigo={bono?.codigo ?? null}
+          onClose={() => setShowYaParticipaste(false)}
+          onVerCuenta={() => {
+            setShowYaParticipaste(false)
+            navigate('dashboard')
+          }}
+        />
+      )}
       {showModal && wonPrizeIdx !== null && (
         <PrizeModal
           segmentIndex={wonPrizeIdx}
@@ -247,27 +388,34 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
       <div className="text-center -mt-7 md:-mt-12 z-10">
         <button
           type="button"
-          onClick={spin}
+          onClick={() => void spin()}
           disabled={isSpinning || showModal}
           className="px-10 py-4 rounded-full font-black text-base tracking-wide transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           style={{
-            background: isSpinning
-              ? 'linear-gradient(135deg, #8A7020, #6A5518)'
-              : 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
+            background:
+              isSpinning || giroBloqueado
+                ? 'linear-gradient(135deg, #8A7020, #6A5518)'
+                : 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
             color: '#0a0805',
             letterSpacing: '0.1em',
             minWidth: 250,
-            animation: isSpinning ? 'none' : 'pulse-glow 2.5s ease-in-out infinite',
+            animation: isSpinning || giroBloqueado ? 'none' : 'pulse-glow 2.5s ease-in-out infinite',
             transform: isSpinning ? 'scale(0.97)' : 'scale(1)',
           }}
         >
-          {isSpinning ? '⏳ Descubriendo tu premio...' : 'Girar Ruleta'}
+          {isSpinning
+            ? '⏳ Descubriendo tu premio...'
+            : authLoading
+            ? 'Cargando...'
+            : cliente
+            ? 'Ya tienes cuenta'
+            : 'Girar Ruleta'}
         </button>
 
         {spinError && <p className="mt-3 text-red-400 text-xs">{spinError}</p>}
 
         <p className="mt-3 text-[#6B5D3F] text-xs">
-          Un giro por promoción ·{' '}
+          {cliente ? 'Un bono por persona · la ruleta es para nuevos jugadores' : 'Un giro por promoción'} ·{' '}
           <button
             type="button"
             onClick={() => navigate('terms')}

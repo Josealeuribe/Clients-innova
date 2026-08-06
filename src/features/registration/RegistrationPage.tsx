@@ -1,25 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Trophy, CircleCheck, Circle, Loader2, ArrowLeft, ArrowRight, TriangleAlert } from 'lucide-react'
+import { Trophy, CircleCheck, Circle, Loader2, ArrowLeft, ArrowRight, TriangleAlert, FileText, ShieldCheck } from 'lucide-react'
 import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
 import { useNavigation } from '@/shared/context/NavigationContext'
 import { ApiError, checkDisponibilidad } from '@/shared/api/client'
+import { NOMBRES_DEPARTAMENTOS, MUNICIPIOS_POR_DEPARTAMENTO } from '@/shared/data/colombia'
+import { useCampoBorrador, useRegistrationDraft } from '@/shared/context/RegistrationDraftContext'
 import logoImg from '@/shared/assets/images/LOGO-CASINO.png'
 
 interface Props {
   navigate: (page: Page) => void
   prize: string | null
   ticket: string | null
-}
-
-const DEPARTMENTS = ['Cundinamarca', 'Antioquia', 'Valle del Cauca', 'Atlántico', 'Santander', 'Bolívar']
-const CITIES: Record<string, string[]> = {
-  'Cundinamarca': ['Bogotá', 'Soacha', 'Chía', 'Zipaquirá'],
-  'Antioquia': ['Medellín', 'Bello', 'Itagüí', 'Envigado'],
-  'Valle del Cauca': ['Cali', 'Palmira', 'Buenaventura', 'Tuluá'],
-  'Atlántico': ['Barranquilla', 'Soledad', 'Malambo', 'Sabanalarga'],
-  'Santander': ['Bucaramanga', 'Floridablanca', 'Girón', 'Piedecuesta'],
-  'Bolívar': ['Cartagena', 'Magangué', 'El Carmen de Bolívar', 'Mompox'],
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -113,41 +105,45 @@ function Checkbox({ label, checked, onChange, required = false }:
 
 export default function RegistrationPage({ navigate, prize, ticket }: Props) {
   const { register } = useAuth()
-  const { goHome } = useNavigation()
-  const [step, setStep] = useState(1)
+  const { goHome, hrefFor } = useNavigation()
+  const { limpiar: limpiarBorrador } = useRegistrationDraft()
+  // Los campos usan useCampoBorrador en vez de useState: así salir a leer los
+  // términos y volver conserva lo escrito y el paso en el que iba. El
+  // borrador vive en memoria (ver RegistrationDraftContext).
+  const [step, setStep] = useCampoBorrador('step', 1)
   const [attemptedNext, setAttemptedNext] = useState(false)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Step 1
-  const [nombres, setNombres] = useState('')
-  const [apellidos, setApellidos] = useState('')
-  const [docType, setDocType] = useState('')
-  const [docNum, setDocNum] = useState('')
-  const [birth, setBirth] = useState('')
-  const [phone, setPhone] = useState('')
+  const [nombres, setNombres] = useCampoBorrador('nombres', '')
+  const [apellidos, setApellidos] = useCampoBorrador('apellidos', '')
+  const [docType, setDocType] = useCampoBorrador('docType', '')
+  const [docNum, setDocNum] = useCampoBorrador('docNum', '')
+  const [birth, setBirth] = useCampoBorrador('birth', '')
+  const [phone, setPhone] = useCampoBorrador('phone', '')
   const [docNumDisponible, setDocNumDisponible] = useState<boolean | null>(null)
   const [checkingDocNum, setCheckingDocNum] = useState(false)
 
   // Step 2
-  const [dept, setDept] = useState('')
-  const [city, setCity] = useState('')
+  const [dept, setDept] = useCampoBorrador('dept', '')
+  const [city, setCity] = useCampoBorrador('city', '')
 
   // Step 3
-  const [email, setEmail] = useState('')
-  const [pass, setPass] = useState('')
-  const [passConfirm, setPassConfirm] = useState('')
+  const [email, setEmail] = useCampoBorrador('email', '')
+  const [pass, setPass] = useCampoBorrador('pass', '')
+  const [passConfirm, setPassConfirm] = useCampoBorrador('passConfirm', '')
   const [showPass, setShowPass] = useState(false)
   const [emailDisponible, setEmailDisponible] = useState<boolean | null>(null)
   const [checkingEmail, setCheckingEmail] = useState(false)
 
   // Step 4
-  const [terminos, setTerminos] = useState(false)
-  const [datos, setDatos] = useState(false)
-  const [edad, setEdad] = useState(false)
-  const [promo, setPromo] = useState(false)
-  const [comms, setComms] = useState(false)
+  const [terminos, setTerminos] = useCampoBorrador('terminos', false)
+  const [datos, setDatos] = useCampoBorrador('datos', false)
+  const [edad, setEdad] = useCampoBorrador('edad', false)
+  const [promo, setPromo] = useCampoBorrador('promo', false)
+  const [comms, setComms] = useCampoBorrador('comms', false)
 
   const allConfirmed = terminos && datos && edad && promo && comms
   const toggleAllConfirmations = (checked: boolean) => {
@@ -239,6 +235,15 @@ export default function RegistrationPage({ navigate, prize, ticket }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email])
 
+  // Tras registrarse, el cliente termina en su propia vista: ahí están su
+  // bono, el código que debe presentar en sede y el historial. Se deja unos
+  // segundos la pantalla de éxito para que alcance a ver el premio reservado.
+  useEffect(() => {
+    if (!success) return
+    const timeout = setTimeout(() => navigate('dashboard'), 3500)
+    return () => clearTimeout(timeout)
+  }, [success, navigate])
+
   const step1Valid =
     !!nombres.trim() && !!apellidos.trim() && !!docType && !!docNum.trim() && !docNumError &&
     docNumDisponible !== false && !!birth && !birthError && !!phone.trim() && !phoneError
@@ -288,6 +293,9 @@ export default function RegistrationPage({ navigate, prize, ticket }: Props) {
         comms,
         ticket,
       })
+      // La cuenta ya existe: el borrador (con la contraseña) deja de tener
+      // motivo para seguir en memoria.
+      limpiarBorrador()
       setSuccess(true)
     } catch (error) {
       setSubmitError(error instanceof ApiError ? error.message : 'No se pudo crear tu cuenta. Intenta de nuevo.')
@@ -327,9 +335,9 @@ export default function RegistrationPage({ navigate, prize, ticket }: Props) {
             }}>
             Ver mi Premio
           </button>
-          <button onClick={() => navigate('login')} className="mt-3 text-sm text-[#6B5D3F] hover:text-[#9A7B50] transition-colors">
-            Ir a mi cuenta
-          </button>
+          <p className="mt-3 text-xs text-[#6B5D3F]">
+            Te llevamos a tu cuenta automáticamente...
+          </p>
         </div>
       </div>
     )
@@ -411,7 +419,7 @@ export default function RegistrationPage({ navigate, prize, ticket }: Props) {
           <div className="flex flex-col gap-4">
             <Select
               label="Departamento"
-              options={DEPARTMENTS}
+              options={NOMBRES_DEPARTAMENTOS}
               value={dept}
               onChange={v => { setDept(v); setCity('') }}
               placeholder="Selecciona un departamento..."
@@ -419,7 +427,7 @@ export default function RegistrationPage({ navigate, prize, ticket }: Props) {
             />
             <Select
               label="Ciudad"
-              options={dept ? CITIES[dept] : []}
+              options={dept ? MUNICIPIOS_POR_DEPARTAMENTO[dept] ?? [] : []}
               value={city}
               onChange={setCity}
               disabled={!dept}
@@ -519,6 +527,33 @@ export default function RegistrationPage({ navigate, prize, ticket }: Props) {
                 <TriangleAlert size={12} className="flex-shrink-0" /> Debes aceptar todas las condiciones obligatorias para continuar.
               </span>
             )}
+
+            {/* Enlaces a los documentos que se están aceptando. Son <a> con
+                href real para que se puedan abrir en otra pestaña, pero el
+                clic normal navega dentro de la app: al volver, el formulario
+                sigue como estaba (ver RegistrationDraftContext). */}
+            <div className="mt-2 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/5 px-4 py-3">
+              <p className="text-xs text-[#9A7B50] mb-2">Antes de aceptar, puedes consultar:</p>
+              <div className="flex flex-col gap-1.5">
+                <a
+                  href={hrefFor('terms')}
+                  onClick={(e) => { e.preventDefault(); navigate('terms') }}
+                  className="text-xs text-[#D4AF37] hover:text-[#F0C847] underline inline-flex items-center gap-1.5 w-fit"
+                >
+                  <FileText size={13} className="flex-shrink-0" /> Términos y condiciones
+                </a>
+                <a
+                  href={hrefFor('privacy')}
+                  onClick={(e) => { e.preventDefault(); navigate('privacy') }}
+                  className="text-xs text-[#D4AF37] hover:text-[#F0C847] underline inline-flex items-center gap-1.5 w-fit"
+                >
+                  <ShieldCheck size={13} className="flex-shrink-0" /> Política de privacidad
+                </a>
+              </div>
+              <p className="text-[10px] text-[#6B5D3F] mt-2">
+                Al volver retomarás el registro donde lo dejaste.
+              </p>
+            </div>
           </div>
         )}
 

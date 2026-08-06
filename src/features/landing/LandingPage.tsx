@@ -19,7 +19,6 @@ const MARKETING_TAG: Record<string, string> = {
   'bono-50000': 'PREMIO MAYOR',
   'carton-bingo': 'NUEVO',
   'entrada-evento': 'VIP',
-  'giro-extra': 'BONUS',
   'premio-sorpresa': 'PREMIUM',
 }
 

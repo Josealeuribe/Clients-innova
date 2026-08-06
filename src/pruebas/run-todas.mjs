@@ -8,7 +8,14 @@ import { dirname, join } from 'node:path'
 import { api } from './_helpers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const SUITES = ['01-auth.pruebas.mjs', '02-ruleta-bono.pruebas.mjs', '03-admin-cajero.pruebas.mjs']
+const SUITES = [
+  '01-auth.pruebas.mjs',
+  '02-ruleta-bono.pruebas.mjs',
+  '03-admin-cajero.pruebas.mjs',
+  '04-un-bono-por-cliente.pruebas.mjs',
+  '05-auditoria.pruebas.mjs',
+  '06-vigencia-y-codigos.pruebas.mjs',
+]
 
 async function backendDisponible() {
   try {

@@ -17,13 +17,14 @@ async function main() {
   assert(loginCajero.body?.tipo === 'staff' && loginCajero.body?.staff?.rol === 'cajero', 'login de cajero devuelve tipo=staff, rol=cajero')
   const cajeroToken = loginCajero.body?.token
 
-  // 2) Preparar un cliente con bono pendiente para canjear
+  // 2) Preparar un cliente con bono pendiente para canjear.
   const giro = await api('/ruleta/girar-anonimo', { method: 'POST' })
   const registro = await api('/auth/register', {
     method: 'POST',
     body: JSON.stringify(registroValido({ email: testEmail(), docNum: testDocNum(), ticket: giro.body.ticket })),
   })
   const clienteToken = registro.body.token
+  assert(!!registro.body?.bono, 'el cliente de prueba queda con un bono pendiente que canjear')
   const codigo = registro.body.bono.codigo
 
   // 3) Control de acceso por rol
@@ -60,30 +61,67 @@ async function main() {
   const meAntes = await api('/auth/me', { headers: authHeader(clienteToken) })
   assert(!!meAntes.body?.bono, 'el cliente ve su bono en /auth/me antes del canje')
 
-  // 8) Cajero confirma el canje
-  const canje = await api(`/cajero/codigo/${codigo}/canjear`, { method: 'POST', headers: authHeader(cajeroToken) })
-  assert(canje.status === 200, 'confirmar el canje responde 200')
+  // 8) Catálogo de sedes (lo consume el panel de admin, ya no un select)
+  const sedes = await api('/cajero/sedes', { headers: authHeader(cajeroToken) })
+  assert(sedes.status === 200, 'GET /cajero/sedes responde 200')
+  assert(sedes.body?.sedes?.length === 3, 'el catálogo devuelve las 3 sedes de Gran Casino Cúcuta')
+
+  // 9) La vista previa dice a qué casino pertenece el bono
+  assert(!!preview.body?.sedeRedencion, 'la vista previa indica el casino asignado al bono')
+  const sedeAsignada = preview.body.sedeRedencion
+
+  // 10) El canje ya NO pide sede: se deduce del premio
+  const canje = await api(`/cajero/codigo/${codigo}/canjear`, {
+    method: 'POST',
+    headers: authHeader(cajeroToken),
+  })
+  assert(canje.status === 200, 'confirmar el canje sin enviar sede responde 200')
   assert(canje.body?.estado === 'reclamado', 'tras canjear, el estado pasa a "reclamado"')
+  assert(
+    canje.body?.sedeCanje === sedeAsignada.nombre,
+    'la sede del canje se tomó automáticamente del casino asignado al premio',
+  )
 
-  // 9) El bono DESAPARECE para el cliente inmediatamente después (regla explícita del negocio)
+  // 11) El bono NO desaparece para el cliente: queda como constancia de que
+  //     lo redimió, con la fecha y la sede de entrega. (Antes se ocultaba;
+  //     se cambió para que el cliente conserve su comprobante.)
   const meDespues = await api('/auth/me', { headers: authHeader(clienteToken) })
-  assert(meDespues.body?.bono === null, 'el bono desaparece de /auth/me del cliente justo después del canje')
+  assert(!!meDespues.body?.bono, 'el bono sigue visible para el cliente después del canje')
+  assert(meDespues.body?.bono?.estado === 'reclamado', 'el cliente ve su bono en estado "reclamado"')
+  assert(!!meDespues.body?.bono?.canjeadoEn, 'el cliente ve la fecha en que se le entregó el bono')
+  assert(meDespues.body?.bono?.sede === sedeAsignada.nombre, 'el cliente ve en qué sede se le entregó')
 
-  // 10) No se puede canjear el mismo código dos veces
-  const canjeDuplicado = await api(`/cajero/codigo/${codigo}/canjear`, { method: 'POST', headers: authHeader(cajeroToken) })
+  assert(meDespues.body?.yaParticipo === true, 'tras el canje, /auth/me sigue marcando yaParticipo=true')
+  assert(meDespues.body?.bonoCanjeado === true, 'tras el canje, /auth/me marca bonoCanjeado=true')
+
+  // 12) No se puede canjear el mismo código dos veces
+  const canjeDuplicado = await api(`/cajero/codigo/${codigo}/canjear`, {
+    method: 'POST',
+    headers: authHeader(cajeroToken),
+  })
   assert(canjeDuplicado.status === 409, 'intentar canjear el mismo código otra vez responde 409')
 
-  // 11) El historial de canjes incluye este canje con el nombre del cajero
+  // 13) El historial de canjes incluye este canje con el cajero y la sede
   const historial = await api('/cajero/historial', { headers: authHeader(cajeroToken) })
   assert(historial.status === 200, 'GET /cajero/historial responde 200')
   const filaHistorial = historial.body?.canjes?.find((h) => h.codigo === codigo)
   assert(!!filaHistorial, 'el canje recién hecho aparece en el historial')
   assert(filaHistorial?.canjeadoPor === 'Cajero', 'el historial registra qué cajero hizo el canje')
+  assert(filaHistorial?.sede === sedeAsignada.nombre, 'el historial registra en qué sede se entregó el bono')
 
-  // 12) El admin ahora ve el bono como "reclamado" (a diferencia del cliente)
+  // 14) El admin ahora ve el bono como "reclamado" (a diferencia del cliente)
   const listadoDespues = await api('/admin/clientes', { headers: authHeader(adminToken) })
   const filaDespues = listadoDespues.body?.clientes?.find((c) => c.email === registro.body.cliente.email)
   assert(filaDespues?.bono?.estado === 'reclamado', 'el admin sí ve el bono como "reclamado" (vista completa, no filtrada)')
+  assert(filaDespues?.bono?.sede === sedeAsignada.nombre, 'el admin también ve la sede del canje')
+
+  // 15) La vista previa del cajero trae los datos con los que se verifica al
+  //     cliente contra su documento fisico antes de entregar el bono.
+  const previewFinal = await api(`/cajero/codigo/${codigo}`, { headers: authHeader(cajeroToken) })
+  assert(previewFinal.body?.cliente?.nombres === registro.body.cliente.nombres, 'la vista previa trae el nombre del cliente')
+  assert(!!previewFinal.body?.cliente?.email, 'la vista previa trae el correo del cliente')
+  assert(!!previewFinal.body?.cliente?.telefono, 'la vista previa trae el celular del cliente')
+  assert(!!previewFinal.body?.cliente?.registradoEn, 'la vista previa trae la fecha de registro del cliente')
 
   return finish()
 }

@@ -3,7 +3,7 @@ import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
 import BackButton from '@/shared/components/BackButton'
 import logoImg from '@/shared/assets/images/LOGO-CASINO.png'
-import { Home, Gift, Layers, Trophy, History, User, LogOut, ChevronRight, type LucideIcon } from 'lucide-react'
+import { Home, Gift, Layers, Trophy, History, User, LogOut, ChevronRight, CircleCheck, MapPin, type LucideIcon } from 'lucide-react'
 
 interface Props {
   navigate: (page: Page) => void
@@ -101,8 +101,18 @@ export default function DashboardPage({ navigate }: Props) {
   const bonoFecha = bono
     ? new Date(bono.creadoEn).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
     : null
-  const bonoEstadoLabel = bono?.estado === 'pendiente' ? 'Disponible' : bono?.estado
-  const bonoEstadoColor = bono?.estado === 'pendiente' ? '#22c55e' : '#eab308'
+
+  // El bono ya redimido no se borra: queda como constancia de la entrega. Por
+  // eso el estado se muestra explícitamente, para que nadie se presente en
+  // sede con un código que ya se usó.
+  const bonoRedimido = bono?.estado === 'reclamado'
+  const bonoFechaCanje = bono?.canjeadoEn
+    ? new Date(bono.canjeadoEn).toLocaleString('es-CO', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      })
+    : null
+  const bonoEstadoLabel = bonoRedimido ? 'Redimido' : bono?.estado === 'pendiente' ? 'Disponible' : bono?.estado
+  const bonoEstadoColor = bonoRedimido ? '#9A7B50' : '#22c55e'
 
   return (
     <div className="min-h-screen bg-[#0a0805] flex">
@@ -202,11 +212,19 @@ export default function DashboardPage({ navigate }: Props) {
               {bono && (
                 <div className="rounded-2xl border border-[#D4AF37]/35 p-5 mb-6 flex items-center gap-4"
                   style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04))' }}>
-                  <Trophy size={40} className="text-[#D4AF37] flex-shrink-0" />
+                  {bonoRedimido
+                    ? <CircleCheck size={40} className="text-[#22c55e] flex-shrink-0" />
+                    : <Trophy size={40} className="text-[#D4AF37] flex-shrink-0" />}
                   <div>
-                    <p className="text-[#D4AF37] text-xs font-bold tracking-wider mb-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>PREMIO GANADO</p>
+                    <p className="text-[#D4AF37] text-xs font-bold tracking-wider mb-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {bonoRedimido ? 'PREMIO REDIMIDO' : 'PREMIO GANADO'}
+                    </p>
                     <p className="text-[#F5E6C8] font-semibold">{bono.premio.nombre}</p>
-                    <p className="text-[#9A7B50] text-xs mt-0.5">Código {bono.codigo} · Redímelo en cualquiera de nuestras sedes</p>
+                    <p className="text-[#9A7B50] text-xs mt-0.5">
+                      {bonoRedimido
+                        ? `Entregado${bono.sede ? ` en ${bono.sede}` : ''}${bonoFechaCanje ? ` · ${bonoFechaCanje}` : ''}`
+                        : `Código ${bono.codigo}${bono.sedeRedencion ? ` · Redímelo en ${bono.sedeRedencion.nombre}` : ''}`}
+                    </p>
                   </div>
                   <LinkArrow
                     label="Ver"
@@ -259,7 +277,38 @@ export default function DashboardPage({ navigate }: Props) {
                     <span>Asignado: {bonoFecha}</span>
                     <span>Código: <span className="text-[#D4AF37] font-mono">{bono.codigo}</span></span>
                   </div>
-                  <p className="text-xs text-[#6B5D3F] mt-4">Preséntate en cualquiera de nuestras sedes con tu documento y este código para redimirlo.</p>
+
+                  {bonoRedimido ? (
+                    /* Constancia de entrega: el bono no desaparece al
+                       canjearse, queda este comprobante con fecha y sede. */
+                    <div className="mt-4 rounded-xl border border-[#22c55e]/25 bg-[#22c55e]/8 p-4">
+                      <p className="text-sm text-[#22c55e] font-semibold flex items-center gap-1.5 mb-2">
+                        <CircleCheck size={16} /> Redimido correctamente
+                      </p>
+                      <div className="grid gap-1 text-xs text-[#9A7B50]">
+                        {bonoFechaCanje && <span>Fecha de entrega: {bonoFechaCanje}</span>}
+                        {bono.sede && <span>Sede: {bono.sede}</span>}
+                      </div>
+                      <p className="text-[10px] text-[#6B5D3F] mt-2">
+                        Conserva este comprobante. Este código ya fue usado y no puede volver a redimirse.
+                      </p>
+                    </div>
+                  ) : bono.sedeRedencion ? (
+                    /* Cada premio pertenece a un casino: el cliente debe ir a
+                       ESE, no a cualquiera de los tres. */
+                    <div className="mt-4 rounded-xl border border-[#D4AF37]/25 bg-[#D4AF37]/8 p-4">
+                      <p className="text-xs text-[#D4AF37] font-bold tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <MapPin size={13} /> REDÍMELO EN
+                      </p>
+                      <p className="text-sm text-[#F5E6C8] font-semibold">{bono.sedeRedencion.nombre}</p>
+                      <p className="text-xs text-[#9A7B50] mt-0.5">{bono.sedeRedencion.direccion}</p>
+                      <p className="text-[10px] text-[#6B5D3F] mt-2">
+                        Preséntate en caja con tu documento y este código. Este bono solo se entrega en esta sede.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#6B5D3F] mt-4">Preséntate en caja con tu documento y este código para redimirlo.</p>
+                  )}
                 </div>
               ) : (
                 <NoBonoYet navigate={navigate} />
@@ -295,6 +344,9 @@ export default function DashboardPage({ navigate }: Props) {
                     <span>Tipo: {bono.premio.monetario ? 'Bono' : 'Cortesía'}</span>
                     <span>Obtenido: {bonoFecha}</span>
                     <span className="col-span-2">Código: <span className="text-[#D4AF37] font-mono">{bono.codigo}</span></span>
+                    {bono.sedeRedencion && (
+                      <span className="col-span-2">Sede: <span className="text-[#C4A97A]">{bono.sedeRedencion.nombre}</span></span>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -303,14 +355,61 @@ export default function DashboardPage({ navigate }: Props) {
             </div>
           )}
 
-          {/* HISTORY */}
+          {/* HISTORY — auditoría del bono: qué pasó, cuándo y dónde */}
           {section === 'history' && (
             <div style={{ animation: 'slide-up 0.4s ease-out forwards' }}>
-              <ComingSoon
-                icon={History}
-                title="Historial"
-                message="El historial de actividad de tu cuenta estará disponible próximamente."
-              />
+              {bono ? (
+                <div className="rounded-2xl border border-[#D4AF37]/15 p-6"
+                  style={{ background: 'linear-gradient(145deg, #1C1810, #121009)' }}>
+                  <h3 className="font-bold text-[#F5E6C8] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Historial de tu bono
+                  </h3>
+                  <p className="text-xs text-[#6B5D3F] mb-5">
+                    Código <span className="text-[#D4AF37] font-mono">{bono.codigo}</span>
+                  </p>
+
+                  <ol className="relative border-l border-[#D4AF37]/20 ml-2">
+                    <li className="ml-5 pb-6">
+                      <span className="absolute -left-[7px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]" />
+                      <p className="text-sm text-[#F5E6C8] font-medium">Bono ganado en la ruleta</p>
+                      <p className="text-xs text-[#9A7B50] mt-0.5">{bono.premio.nombre}</p>
+                      {bono.sedeRedencion && (
+                        <p className="text-xs text-[#6B5D3F] mt-0.5">Asignado a {bono.sedeRedencion.nombre}</p>
+                      )}
+                      <p className="text-xs text-[#6B5D3F] mt-0.5">{bonoFecha}</p>
+                    </li>
+
+                    <li className="ml-5">
+                      <span
+                        className="absolute -left-[7px] w-3.5 h-3.5 rounded-full"
+                        style={{ background: bonoRedimido ? '#22c55e' : '#4A3D28' }}
+                      />
+                      {bonoRedimido ? (
+                        <>
+                          <p className="text-sm text-[#22c55e] font-medium">Redimido correctamente</p>
+                          {bono.sede && <p className="text-xs text-[#9A7B50] mt-0.5">{bono.sede}</p>}
+                          <p className="text-xs text-[#6B5D3F] mt-0.5">{bonoFechaCanje}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-[#6B5D3F] font-medium">Pendiente de redimir</p>
+                          <p className="text-xs text-[#6B5D3F] mt-0.5">
+                            {bono.sedeRedencion
+                              ? `Preséntate en ${bono.sedeRedencion.nombre} con tu documento.`
+                              : 'Preséntate en caja con tu documento.'}
+                          </p>
+                        </>
+                      )}
+                    </li>
+                  </ol>
+                </div>
+              ) : (
+                <ComingSoon
+                  icon={History}
+                  title="Sin actividad todavía"
+                  message="Cuando ganes un bono en la ruleta, aquí verás su historial completo: cuándo lo obtuviste y cuándo lo redimiste."
+                />
+              )}
             </div>
           )}
 

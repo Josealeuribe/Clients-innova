@@ -15,6 +15,7 @@ import AdminPage from '@/features/admin/AdminPage'
 import CajeroPage from '@/features/cajero/CajeroPage'
 import Navbar from '@/shared/components/Navbar'
 import { NavigationProvider, useNavigation } from '@/shared/context/NavigationContext'
+import { RegistrationDraftProvider } from '@/shared/context/RegistrationDraftContext'
 import bgImg from '@/shared/assets/images/image-copy.png'
 
 import type { Page, AppState } from '@/shared/types/navigation'
@@ -84,8 +85,13 @@ function AppShell() {
 
 export default function App() {
   return (
-    <NavigationProvider initialPage="landing">
-      <AppShell />
+    // El borrador del registro va POR ENCIMA de AppShell: es justamente el
+    // cambio de vista lo que desmonta RegistrationPage, así que el provider
+    // tiene que sobrevivirlo para conservar el formulario.
+    <NavigationProvider fallbackPage="landing">
+      <RegistrationDraftProvider>
+        <AppShell />
+      </RegistrationDraftProvider>
     </NavigationProvider>
   )
 }

@@ -23,20 +23,37 @@ export interface PremioInfo {
   monetario: boolean
 }
 
+// El bono sigue visible para el cliente después de canjeado, como constancia
+// de que lo redimió: `estado` pasa a 'reclamado' y se llenan canjeadoEn/sede.
 export interface BonoInfo {
   codigo: string
   estado: string
   creadoEn: string
+  canjeadoEn: string | null
+  /** Hasta cuándo se puede redimir. Copia de la vigencia del premio. */
+  vigenciaHasta: string
+  /** Casino al que el cliente debe ir a redimir: viene del premio. */
+  sedeRedencion: Sede | null
+  /** Casino donde realmente se redimió. Null mientras esté pendiente. */
+  sede: string | null
   premio: PremioInfo
+}
+
+// Contrato explícito de participación. Hoy es deducible de `bono`, pero la
+// ruleta pregunta "¿ya participó?" y no debería tener que inferirlo del
+// estado del bono.
+export interface EstadoParticipacion {
+  yaParticipo: boolean
+  bonoCanjeado: boolean
 }
 
 // El login es único para clientes y personal (admin/cajero); `tipo` decide
 // a qué panel se redirige tras autenticarse.
 export type LoginResponse =
-  | { token: string; tipo: 'cliente'; cliente: ClienteSafe; bono: BonoInfo | null }
+  | ({ token: string; tipo: 'cliente'; cliente: ClienteSafe; bono: BonoInfo | null } & EstadoParticipacion)
   | { token: string; tipo: 'staff'; staff: StaffSafe }
 
-export interface RegisterResponse {
+export interface RegisterResponse extends EstadoParticipacion {
   token: string
   tipo: 'cliente'
   cliente: ClienteSafe
@@ -45,7 +62,7 @@ export interface RegisterResponse {
 }
 
 export type MeResponse =
-  | { tipo: 'cliente'; cliente: ClienteSafe; bono: BonoInfo | null }
+  | ({ tipo: 'cliente'; cliente: ClienteSafe; bono: BonoInfo | null } & EstadoParticipacion)
   | { tipo: 'staff'; staff: StaffSafe }
 
 export interface SpinResponse {
@@ -81,6 +98,8 @@ export interface AdminClienteBono {
   creadoEn: string
   canjeadoEn: string | null
   canjeadoPor: string | null
+  sede: string | null
+  sedeRedencion: string | null
   premio: { nombre: string; monetario: boolean }
 }
 
@@ -101,17 +120,87 @@ export interface AdminClienteRow {
 
 // --- Cajero ---
 
+export interface Sede {
+  clave: string
+  nombre: string
+  direccion: string
+}
+
 export interface CanjePreview {
   codigo: string
   estado: string
+  vigenciaHasta: string
+  vencido: boolean
   premio: { nombre: string; detalle: string; monetario: boolean }
-  cliente: { nombres: string; apellidos: string; docTipo: string; docNumero: string }
+  cliente: {
+    nombres: string
+    apellidos: string
+    docTipo: string
+    docNumero: string
+    email: string
+    telefono: string
+    ciudad: string
+    departamento: string
+    registradoEn: string
+  }
+  sedeCanje: string | null
+  sedeRedencion: Sede | null
+}
+
+// Resultado de buscar un cliente por documento en el panel de cajero
+// (cliente que llegó sin código). El bono viene aunque ya esté canjeado, para
+// poder explicarle cuándo y dónde se entregó.
+export interface BusquedaPorDocumento {
+  cliente: {
+    nombres: string
+    apellidos: string
+    docTipo: string
+    docNumero: string
+    email: string
+    telefono: string
+    ciudad: string
+    departamento: string
+    registradoEn: string
+  }
+  bono: {
+    codigo: string
+    estado: string
+    creadoEn: string
+    canjeadoEn: string | null
+    vigenciaHasta: string
+    vencido: boolean
+    canjeadoPor: string | null
+    sede: string | null
+    sedeRedencion: Sede | null
+    premio: { nombre: string; detalle: string; monetario: boolean }
+  } | null
+}
+
+export interface AdminCanjeRow {
+  codigo: string
+  creadoEn: string
+  canjeadoEn: string | null
+  horasHastaCanje: number | null
+  sede: string | null
+  sedeRedencion: string | null
+  canjeadoPor: string | null
+  canjeadoPorEmail: string | null
+  premio: { nombre: string; monetario: boolean }
+  cliente: {
+    nombres: string
+    apellidos: string
+    docTipo: string
+    docNumero: string
+    email: string
+    telefono: string
+  }
 }
 
 export interface CanjeHistorialRow {
   codigo: string
   canjeadoEn: string
   canjeadoPor: string | null
+  sede: string | null
   premio: { nombre: string; monetario: boolean }
   cliente: { nombres: string; apellidos: string; docNumero: string }
 }

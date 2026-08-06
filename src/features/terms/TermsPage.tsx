@@ -1,7 +1,7 @@
 import type { Page } from '@/shared/types/navigation'
 import { TriangleAlert } from 'lucide-react'
 import Footer from '@/shared/components/Footer'
-import BackButton from '@/shared/components/BackButton'
+import LegalBackButton from '@/shared/components/LegalBackButton'
 
 interface Props {
   navigate: (page: Page) => void
@@ -57,7 +57,7 @@ export default function TermsPage({ navigate }: Props) {
     <div className="min-h-screen flex flex-col pt-28 md:pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-transparent">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
-          <BackButton />
+          <LegalBackButton />
         </div>
         <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
           GRAN CASINO CUCUTA

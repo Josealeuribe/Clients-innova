@@ -7,6 +7,8 @@ import type {
   AdminClienteRow,
   CanjePreview,
   CanjeHistorialRow,
+  BusquedaPorDocumento,
+  AdminCanjeRow,
 } from './types'
 
 export class ApiError extends Error {}
@@ -41,8 +43,14 @@ function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` }
 }
 
-export function spinRoulette() {
-  return request<SpinResponse>('/ruleta/girar-anonimo', { method: 'POST' })
+// Se manda el token si existe, aunque el endpoint sea anónimo: así el backend
+// puede rechazar el giro de un cliente que ya tiene cuenta. Sin esto la regla
+// viviría solo en el navegador.
+export function spinRoulette(token?: string | null) {
+  return request<SpinResponse>('/ruleta/girar-anonimo', {
+    method: 'POST',
+    headers: token ? authHeaders(token) : undefined,
+  })
 }
 
 export function registerCliente(payload: RegisterPayload) {
@@ -78,12 +86,25 @@ export function adminFetchClientes(token: string) {
   return request<{ clientes: AdminClienteRow[] }>('/admin/clientes', { headers: authHeaders(token) })
 }
 
+export function adminFetchCanjes(token: string) {
+  return request<{ canjes: AdminCanjeRow[] }>('/admin/canjes', { headers: authHeaders(token) })
+}
+
 // --- Cajero ---
 
 export function cajeroBuscarCodigo(token: string, codigo: string) {
   return request<CanjePreview>(`/cajero/codigo/${encodeURIComponent(codigo)}`, { headers: authHeaders(token) })
 }
 
+// Para el cliente que llega sin código: se busca por su documento.
+export function cajeroBuscarPorDocumento(token: string, docNumero: string) {
+  return request<BusquedaPorDocumento>(`/cajero/cliente/${encodeURIComponent(docNumero)}`, {
+    headers: authHeaders(token),
+  })
+}
+
+// No lleva sede: cada premio pertenece a un casino y el backend la deduce del
+// bono. Pedírsela al cajero solo abría la puerta a registrarla mal.
 export function cajeroConfirmarCanje(token: string, codigo: string) {
   return request<{ ok: true } & CanjePreview>(`/cajero/codigo/${encodeURIComponent(codigo)}/canjear`, {
     method: 'POST',

@@ -10,6 +10,11 @@ interface AuthContextValue {
   bono: BonoInfo | null
   staff: StaffSafe | null
   isAuthenticated: boolean
+  // El cliente ya tiene un bono (pendiente o canjeado) y por tanto no puede
+  // volver a girar. `bono` no sirve para esto: llega en null cuando ya se
+  // canjeó, igual que cuando nunca participó.
+  yaParticipo: boolean
+  bonoCanjeado: boolean
   loading: boolean
   login: (identifier: string, password: string) => Promise<LoginResponse>
   register: (payload: RegisterPayload) => Promise<RegisterResponse>
@@ -23,7 +28,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [cliente, setCliente] = useState<ClienteSafe | null>(null)
   const [bono, setBono] = useState<BonoInfo | null>(null)
   const [staff, setStaff] = useState<StaffSafe | null>(null)
+  const [participacion, setParticipacion] = useState({ yaParticipo: false, bonoCanjeado: false })
   const [loading, setLoading] = useState(true)
+
+  const SIN_PARTICIPACION = { yaParticipo: false, bonoCanjeado: false }
 
   // Al montar (o al recargar la página), si hay un token guardado, se
   // valida contra el backend para restaurar la sesión (de cliente o de
@@ -39,10 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setStaff(me.staff)
           setCliente(null)
           setBono(null)
+          setParticipacion(SIN_PARTICIPACION)
         } else {
           setCliente(me.cliente)
           setBono(me.bono)
           setStaff(null)
+          setParticipacion({ yaParticipo: me.yaParticipo, bonoCanjeado: me.bonoCanjeado })
         }
       })
       .catch(() => {
@@ -60,10 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStaff(response.staff)
       setCliente(null)
       setBono(null)
+      setParticipacion(SIN_PARTICIPACION)
     } else {
       setCliente(response.cliente)
       setBono(response.bono)
       setStaff(null)
+      setParticipacion({ yaParticipo: response.yaParticipo, bonoCanjeado: response.bonoCanjeado })
     }
     return response
   }
@@ -75,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCliente(response.cliente)
     setBono(response.bono)
     setStaff(null)
+    setParticipacion({ yaParticipo: response.yaParticipo, bonoCanjeado: response.bonoCanjeado })
     return response
   }
 
@@ -84,11 +97,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCliente(null)
     setBono(null)
     setStaff(null)
+    setParticipacion(SIN_PARTICIPACION)
   }
 
   return (
     <AuthContext.Provider
-      value={{ token, cliente, bono, staff, isAuthenticated: !!cliente || !!staff, loading, login, register, logout }}
+      value={{
+        token,
+        cliente,
+        bono,
+        staff,
+        isAuthenticated: !!cliente || !!staff,
+        yaParticipo: participacion.yaParticipo,
+        bonoCanjeado: participacion.bonoCanjeado,
+        loading,
+        login,
+        register,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

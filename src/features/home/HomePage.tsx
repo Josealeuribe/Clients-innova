@@ -20,12 +20,13 @@ import avenida0Video from '@/shared/assets/videos/gran-casino-avenida-0.mp4'
 import imageCarrousel from '@/shared/assets/images/image-casino-carrousel.avif'
 import imageCarrousel2 from '@/shared/assets/images/imagen-carroussel-2.avif'
 import { MarqueeBanner } from '@/features/banner/MarqueeBanner';
-
+import imagenCucuta from '@/shared/assets/images/imagen-casino-cucuta-1.jpg'
+import imagenCucuta2 from '@/shared/assets/images/imagen-casino-cucuta-2.jpg'
 
 const VENUE_VIDEOS = [
-  { title: 'Gran Casino Cúcuta Av 5', src: avenida5Video },
   { title: 'Gran Casino Cúcuta No. 2 · Ventura Plaza', src: venturaVideo },
   { title: 'Gran Casino Cúcuta Av 0', src: avenida0Video },
+  { title: 'Gran Casino Cúcuta Av 5', src: avenida5Video },
 ]
 
 interface Props {
@@ -38,7 +39,7 @@ const CAROUSEL_SLIDES = [
     title: 'Vive la Experiencia Gran Casino',
     subtitle:
       'Descubre en Cúcuta un lugar creado para disfrutar, compartir y vivir momentos llenos de emoción. Atrévete a visitarnos y haz parte de nuestra comunidad.',
-    image: imageCarrousel,
+    image: imagenCucuta,
     gradient: 'linear-gradient(135deg, #3D006B, #7B1515)',
   },
   {
@@ -48,6 +49,15 @@ const CAROUSEL_SLIDES = [
     image: imageCarrousel2,
     gradient: 'linear-gradient(135deg, #7B1515, #8A6000)',
   },
+
+  {
+    title: 'Siempre Hay Algo Nuevo por Vivir',
+    subtitle:
+      'Torneos, noches temáticas, celebraciones y eventos especiales te esperan. Únete a Gran Casino y descubre experiencias creadas para sorprenderte.',
+    image: imagenCucuta2,
+    gradient: 'linear-gradient(135deg, #0D3B0D, #002B70)',
+  },
+
   {
     title: 'Siente la Emoción del Bingo en Vivo',
     subtitle:
@@ -55,13 +65,7 @@ const CAROUSEL_SLIDES = [
     image: bingoImg,
     gradient: 'linear-gradient(135deg, #002B70, #3D006B)',
   },
-  {
-    title: 'Siempre Hay Algo Nuevo por Vivir',
-    subtitle:
-      'Torneos, noches temáticas, celebraciones y eventos especiales te esperan. Únete a Gran Casino y descubre experiencias creadas para sorprenderte.',
-    image: cartasImg,
-    gradient: 'linear-gradient(135deg, #0D3B0D, #002B70)',
-  },
+
 ];
 
 const GAME_CARDS: { title: string; image: string; page: Page | null }[] = [
@@ -154,7 +158,7 @@ export default function HomePage({ navigate }: Props) {
             ))}
           </div>
 
-          
+
         </div>
 
         <div id="sedes" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">

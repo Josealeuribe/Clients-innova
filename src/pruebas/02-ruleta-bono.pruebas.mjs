@@ -3,7 +3,7 @@ import { api, authHeader, createSuite, registroValido, testEmail, testDocNum } f
 const { assert, finish } = createSuite('02 - Ruleta, asignación de bono y unicidad de códigos')
 
 const CLAVES_VALIDAS = [
-  'bono-5000', 'bono-10000', 'bono-20000', 'giro-extra',
+  'bono-5000', 'bono-10000', 'bono-20000',
   'carton-bingo', 'entrada-evento', 'bono-50000', 'premio-sorpresa',
 ]
 
@@ -21,16 +21,18 @@ async function main() {
     const s = await api('/ruleta/girar-anonimo', { method: 'POST' })
     clavesVistas.add(s.body?.premio?.clave)
   }
-  assert(clavesVistas.size >= 5, `se observó variedad real de premios en 40 giros (vistos: ${clavesVistas.size}/8)`)
+  assert(clavesVistas.size >= 5, `se observó variedad real de premios en 40 giros (vistos: ${clavesVistas.size}/7)`)
 
-  // 3) Registrar reclamando el ticket asigna el bono correspondiente
+  // 3) Registrar reclamando el ticket asigna el bono correspondiente. Ya no
+  //    hay premios sin bono: el giro adicional se retiró de la promoción.
+  const giroCanjeable = await api('/ruleta/girar-anonimo', { method: 'POST' })
   const registro = await api('/auth/register', {
     method: 'POST',
-    body: JSON.stringify(registroValido({ email: testEmail(), docNum: testDocNum(), ticket: giro.body.ticket })),
+    body: JSON.stringify(registroValido({ email: testEmail(), docNum: testDocNum(), ticket: giroCanjeable.body.ticket })),
   })
   assert(registro.status === 201, 'registro con ticket responde 201')
-  assert(registro.body?.bono?.premio?.clave === giro.body.premio.clave, 'el bono asignado corresponde exactamente al premio girado')
-  assert(/^GCC-\d{4}-[0-9A-F]{4}$/.test(registro.body?.bono?.codigo || ''), 'el código de canje tiene el formato esperado (GCC-AAAA-XXXX)')
+  assert(registro.body?.bono?.premio?.clave === giroCanjeable.body.premio.clave, 'el bono asignado corresponde exactamente al premio girado')
+  assert(/^GCC-\d{4}-[0-9A-F]{6}$/.test(registro.body?.bono?.codigo || ''), 'el código de canje tiene el formato esperado (GCC-AAAA-XXXXXX)')
   assert(registro.body?.bono?.estado === 'pendiente', 'el bono nuevo queda en estado "pendiente"')
   const token1 = registro.body.token
 
