@@ -78,3 +78,24 @@ real — no verifican renderizado, estilos, responsive ni interacción de UI
 desarrollo. Si más adelante se quiere automatizar también la UI, la opción
 natural es Playwright (`npm init playwright@latest`), pero requiere que el
 entorno donde corran las pruebas pueda lanzar un navegador real.
+
+## ⚠️ Estas pruebas escriben en la base de datos
+
+Cada corrida registra decenas de clientes (`test-e2e-*@example.com`) con sus
+bonos y consentimientos. Contra una base remota eso es sembrar basura en
+producción.
+
+`run-todas.mjs` aborta si detecta que el backend está conectado a una base que
+no sea local. Antes de correrlas, revisa `DATABASE_URL` en `server/.env`.
+
+Para limpiar lo que dejen:
+
+```bash
+cd server
+npx tsx prisma/limpiar-datos-prueba.ts              # simula
+npx tsx prisma/limpiar-datos-prueba.ts --confirmar  # borra
+```
+
+Solo borra clientes que cumplan las dos condiciones a la vez (correo
+`test-e2e-*` y nombre "Prueba Automatizada"). Nunca toca las cuentas de
+personal ni los clientes reales.

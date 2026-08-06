@@ -18,18 +18,37 @@ const SUITES = [
   '07-limite-giros-y-ubicaciones.pruebas.mjs',
 ]
 
-async function backendDisponible() {
+async function estadoDelBackend() {
   try {
     const res = await api('/health')
-    return res.status === 200
+    return res.status === 200 ? res.body : null
   } catch {
-    return false
+    return null
   }
 }
 
 async function main() {
-  if (!(await backendDisponible())) {
+  const salud = await estadoDelBackend()
+  if (!salud) {
     console.error('✗ El backend no responde en http://localhost:4000. Corre "npm run dev" dentro de server/ antes de probar.')
+    process.exit(1)
+  }
+
+  // Estas suites CREAN datos: cada corrida registra decenas de clientes con
+  // correo test-e2e-*. Contra una base remota eso es sembrar basura en
+  // producción — ya ocurrió una vez, con 319 clientes que hubo que borrar a
+  // mano. Por eso se aborta salvo que se pida explícitamente.
+  if (salud.baseRemota && process.env.PERMITIR_BASE_REMOTA !== '1') {
+    console.error('')
+    console.error('✗ El backend está conectado a una base de datos REMOTA.')
+    console.error('  Estas pruebas crean clientes reales en la base a la que apunte el backend.')
+    console.error('')
+    console.error('  Revisa DATABASE_URL en server/.env y apúntalo a tu MySQL local.')
+    console.error('  Si de verdad quieres correrlas contra la base remota:')
+    console.error('      PERMITIR_BASE_REMOTA=1 node src/pruebas/run-todas.mjs')
+    console.error('  y después limpia con:')
+    console.error('      npx tsx prisma/limpiar-datos-prueba.ts --confirmar')
+    console.error('')
     process.exit(1)
   }
 
