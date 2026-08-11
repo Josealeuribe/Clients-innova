@@ -5,12 +5,14 @@ import type {
   MeResponse,
   SpinResponse,
   AdminClienteRow,
+  AdminUsuarioRow,
   CanjePreview,
   HistorialResponse,
   BusquedaPorDocumento,
   AdminCanjeRow,
   GirosRestantes,
   DepartamentoApi,
+  ResetPasswordResponse,
 } from './types'
 
 export class ApiError extends Error {}
@@ -53,6 +55,50 @@ function authHeaders(token: string) {
 // Acotarlo deja el resto funcionando aunque el backend vaya un paso atrás.
 const CON_COOKIE_DE_VISITANTE: RequestInit = { credentials: 'include' }
 
+// EL ARREGLO DEL LÍMITE DE GIROS EN CELULAR
+//
+// La cookie de visitante sola no alcanza. En producción el front vive en
+// gran-casino-cucuta1.onrender.com y la API en otro subdominio de
+// onrender.com: como onrender.com está en la Public Suffix List, esos dos NO
+// son el mismo sitio y la cookie viaja como cookie de TERCEROS. Safari en iOS
+// las bloquea por completo y Chrome en Android va por el mismo camino, así
+// que en el celular el navegador nunca la guardaba: cada giro llegaba sin
+// identificar, el servidor creaba un visitante nuevo y el contador se quedaba
+// clavado en "te quedan 2" dejando girar sin límite. En escritorio sí
+// funcionaba, y por eso el bug solo se veía en móvil.
+//
+// El servidor devuelve además la misma identidad en un token firmado. Se
+// guarda aquí y se reenvía en la cabecera `X-Visitante`, que ningún navegador
+// bloquea. El token va firmado por el servidor: no sirve de nada inventarse
+// uno para volver a girar.
+const VISITANTE_KEY = 'gcc_visitante'
+
+function cabeceraVisitante(): Record<string, string> {
+  try {
+    const token = localStorage.getItem(VISITANTE_KEY)
+    return token ? { 'X-Visitante': token } : {}
+  } catch {
+    // Safari en modo privado puede lanzar al tocar localStorage. Sin token se
+    // sigue: queda la cookie, y si tampoco está, el servidor tratará esta
+    // visita como nueva — que es justo lo que hace hoy.
+    return {}
+  }
+}
+
+// Se guarda la identidad que devuelve el servidor. Se llama en TODA respuesta
+// de la ruleta, no solo la primera: si el token se renueva, se conserva el
+// último.
+function guardarVisitante<T extends { visitanteToken?: string }>(respuesta: T): T {
+  if (respuesta.visitanteToken) {
+    try {
+      localStorage.setItem(VISITANTE_KEY, respuesta.visitanteToken)
+    } catch {
+      // Almacenamiento bloqueado: se sigue con la cookie como única vía.
+    }
+  }
+  return respuesta
+}
+
 // Se manda el token si existe, aunque el endpoint sea anónimo: así el backend
 // puede rechazar el giro de un cliente que ya tiene cuenta. Sin esto la regla
 // viviría solo en el navegador.
@@ -60,14 +106,18 @@ export function spinRoulette(token?: string | null) {
   return request<SpinResponse>('/ruleta/girar-anonimo', {
     ...CON_COOKIE_DE_VISITANTE,
     method: 'POST',
-    headers: token ? authHeaders(token) : undefined,
-  })
+    headers: { ...cabeceraVisitante(), ...(token ? authHeaders(token) : {}) },
+  }).then(guardarVisitante)
 }
 
 // Cuántos giros le quedan al visitante. Se consulta al abrir la ruleta para
-// mostrar el contador sin gastar un giro.
+// mostrar el contador sin gastar un giro, y de paso deja establecida la
+// identidad antes del primer giro.
 export function fetchGirosRestantes() {
-  return request<GirosRestantes>('/ruleta/giros-restantes', CON_COOKIE_DE_VISITANTE)
+  return request<GirosRestantes>('/ruleta/giros-restantes', {
+    ...CON_COOKIE_DE_VISITANTE,
+    headers: cabeceraVisitante(),
+  }).then(guardarVisitante)
 }
 
 // Departamentos y municipios: los sirve el backend desde la tabla contra la
@@ -103,6 +153,44 @@ export function fetchMe(token: string) {
   return request<MeResponse>('/auth/me', { headers: authHeaders(token) })
 }
 
+// --- Recuperación de contraseña (clientes) ---
+//
+// Tres pasos: pedir el código, verificarlo y cambiar la contraseña. El paso
+// intermedio devuelve un token de corta vida para no tener que arrastrar el
+// código hasta el final ni guardarlo en el navegador.
+
+export function solicitarCodigoRecuperacion(email: string) {
+  return request<{ ok: true; mensaje: string; vigenciaMinutos: number }>('/auth/recuperar', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function verificarCodigoRecuperacion(email: string, codigo: string) {
+  return request<{ token: string }>('/auth/recuperar/verificar', {
+    method: 'POST',
+    body: JSON.stringify({ email, codigo }),
+  })
+}
+
+export function cambiarPasswordConCodigo(token: string, pass: string, passConfirm: string) {
+  return request<{ ok: true }>('/auth/recuperar/cambiar', {
+    method: 'POST',
+    body: JSON.stringify({ token, pass, passConfirm }),
+  })
+}
+
+// Cambio con la sesión abierta. Lo usan tanto el cliente como el personal:
+// para admin y cajeras es la única vía de cambiar su propia contraseña, ya
+// que sus correos no reciben mensajes.
+export function cambiarPassword(token: string, actual: string, nueva: string, confirmar: string) {
+  return request<{ ok: true }>('/auth/cambiar-password', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ actual, nueva, confirmar }),
+  })
+}
+
 // --- Admin ---
 
 export function adminFetchClientes(token: string) {
@@ -111,6 +199,20 @@ export function adminFetchClientes(token: string) {
 
 export function adminFetchCanjes(token: string) {
   return request<{ canjes: AdminCanjeRow[] }>('/admin/canjes', { headers: authHeaders(token) })
+}
+
+export function adminFetchUsuarios(token: string) {
+  return request<{ usuarios: AdminUsuarioRow[] }>('/admin/usuarios', { headers: authHeaders(token) })
+}
+
+// Genera una clave temporal para una cuenta de personal y obliga a cambiarla
+// en el siguiente ingreso. Es el reemplazo del "olvidé mi contraseña" para el
+// staff, cuyos correos @grancasino.com.co no son buzones reales.
+export function adminRestablecerPassword(token: string, usuarioId: number) {
+  return request<ResetPasswordResponse>(`/admin/usuarios/${usuarioId}/restablecer-password`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
 }
 
 // --- Cajero ---

@@ -25,7 +25,10 @@ export interface AppState {
 //
 // OJO: al ser una SPA, el servidor debe responder index.html en cualquier
 // ruta. En el Static Site de Render eso es una regla de Rewrite
-// /* -> /index.html; sin ella, entrar directo a /ruleta da 404.
+// /* -> /index.html; sin ella, entrar directo a /ruleta (o recargar estando
+// ahi) da 404. La regla esta declarada en render.yaml, pero solo aplica si el
+// servicio se sincroniza como Blueprint: si el Static Site se creo a mano,
+// hay que agregarla ademas en Dashboard > Redirects/Rewrites.
 export const ROUTES: Record<Page, string> = {
   landing: '/',
   home: '/inicio',

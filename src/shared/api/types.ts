@@ -16,6 +16,12 @@ export interface StaffSafe {
   rol: 'admin' | 'cajero'
   /** Casino donde trabaja. Null para el admin, que no pertenece a uno. */
   sede: Sede | null
+  /**
+   * Entró con una clave temporal (o con la inicial derivada de la cédula) y
+   * tiene que cambiarla antes de poder trabajar. El panel lo bloquea hasta
+   * que lo haga.
+   */
+  debeCambiarPassword: boolean
 }
 
 export interface PremioInfo {
@@ -69,20 +75,24 @@ export type MeResponse =
   | ({ tipo: 'cliente'; cliente: ClienteSafe; bono: BonoInfo | null } & EstadoParticipacion)
   | { tipo: 'staff'; staff: StaffSafe }
 
-export interface SpinResponse {
+export interface SpinResponse extends GirosRestantes {
   premio: PremioInfo
   ticket: string
-  usados: number
-  maximo: number
-  restantes: number
 }
 
-// Control de giros por visitante. El conteo lo lleva el servidor contra una
-// cookie httpOnly, así que recargar la página no lo reinicia.
+// Control de giros por visitante. El conteo lo lleva el servidor: recargar la
+// página no lo reinicia.
 export interface GirosRestantes {
   usados: number
   maximo: number
   restantes: number
+  /**
+   * Identidad firmada del visitante. Se guarda y se reenvía en cada llamada a
+   * la ruleta porque en el celular la cookie de visitante no sobrevive: es
+   * cookie de terceros y Safari/Chrome móvil la bloquean. Ver
+   * server/src/utils/visitante.ts.
+   */
+  visitanteToken?: string
 }
 
 export interface DepartamentoApi {
@@ -136,6 +146,28 @@ export interface AdminClienteRow {
   email: string
   createdAt: string
   bono: AdminClienteBono | null
+}
+
+// Cuenta de personal vista desde el panel de administración.
+export interface AdminUsuarioRow {
+  id: number
+  nombre: string
+  email: string
+  rol: 'admin' | 'cajero'
+  activo: boolean
+  sede: string | null
+  debeCambiarPassword: boolean
+  /** Cuántos bonos ha entregado. Sirve para no restablecer a quien no es. */
+  canjes: number
+  createdAt: string
+}
+
+// La clave temporal viaja UNA sola vez, en esta respuesta: no se guarda en
+// claro en ningún lado. Si el admin la pierde, genera otra.
+export interface ResetPasswordResponse {
+  ok: true
+  usuario: { id: number; nombre: string; email: string }
+  temporal: string
 }
 
 // --- Cajero ---

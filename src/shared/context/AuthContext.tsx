@@ -19,6 +19,10 @@ interface AuthContextValue {
   login: (identifier: string, password: string) => Promise<LoginResponse>
   register: (payload: RegisterPayload) => Promise<RegisterResponse>
   logout: () => void
+  // Baja el aviso de "debes cambiar la contraseña" sin volver a pedir /me: el
+  // backend ya apagó el flag al guardar el cambio, y recargar la sesión entera
+  // solo para eso deja el panel en blanco un instante.
+  marcarPasswordCambiada: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -91,6 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return response
   }
 
+  const marcarPasswordCambiada = () => {
+    setStaff((actual) => (actual ? { ...actual, debeCambiarPassword: false } : actual))
+  }
+
   const logout = () => {
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
@@ -114,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        marcarPasswordCambiada,
       }}
     >
       {children}
