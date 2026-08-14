@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
+import { useEstadoPersistido } from '@/shared/hooks/useEstadoPersistido'
 import StaffSidebarLayout from '@/shared/components/StaffSidebarLayout'
 import { CambioPasswordObligatorio, MiCuentaSection } from '@/shared/components/CambiarPassword'
 import { NAV_ITEMS } from './cajero.constants'
@@ -19,7 +20,9 @@ interface Props {
 
 export default function CajeroPage({ navigate }: Props) {
   const { staff, token, loading: authLoading } = useAuth()
-  const [section, setSection] = useState<CajeroSection>('canjear')
+  // La sección sobrevive a recargar: en el mostrador, un F5 en mitad de un
+  // turno no debe sacar a la cajera del historial y devolverla a "Canjear".
+  const [section, setSection] = useEstadoPersistido<CajeroSection>('gcc_seccion:cajero', 'canjear')
 
   useEffect(() => {
     if (authLoading) return

@@ -1,8 +1,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { fetchMe, loginCliente, registerCliente } from '@/shared/api/client'
+import { cerrarSesionStaff, fetchMe, loginCliente, registerCliente, registrarActividadStaff } from '@/shared/api/client'
 import type { BonoInfo, ClienteSafe, LoginResponse, RegisterPayload, RegisterResponse, StaffSafe } from '@/shared/api/types'
 
 const TOKEN_KEY = 'gcc_token'
+
+// Cada cuánto avisa el panel de que sigue abierto. El servidor considera
+// presente a quien dio señales en los últimos 180 s, así que un minuto deja
+// margen para dos latidos perdidos por una red mala antes de marcar a nadie
+// como ausente por error.
+const LATIDO_MS = 60_000
 
 interface AuthContextValue {
   token: string | null
@@ -66,6 +72,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [token])
 
+  // Latido de presencia, SOLO para el personal: es lo que hace que el módulo de
+  // Personal pueda decir "Activo" de alguien que tiene el panel abierto sin
+  // estar tocándolo. Los clientes no tienen indicador de presencia en ninguna
+  // parte, así que no se les gasta una petición por minuto.
+  //
+  // Se depende de staff?.id y no del objeto `staff`: ese objeto se reemplaza al
+  // cambiar la contraseña (marcarPasswordCambiada) y eso reiniciaría el
+  // temporizador sin motivo.
+  const staffId = staff?.id
+  useEffect(() => {
+    if (!token || !staffId) return
+
+    const latir = () => {
+      // Mejor esfuerzo: si el latido falla no hay nada que decirle a nadie. Lo
+      // único que pasa es que la cuenta aparecerá fuera de línea en el panel del
+      // admin, que es la verdad más segura cuando no hay señal.
+      void registrarActividadStaff(token).catch(() => {})
+    }
+
+    // Uno de entrada: sin esto el estado tardaría hasta un minuto en encenderse
+    // después de iniciar sesión.
+    latir()
+    const temporizador = window.setInterval(latir, LATIDO_MS)
+
+    // El navegador congela los temporizadores de las pestañas ocultas, así que
+    // una pestaña de fondo deja de latir y la cuenta cae a fuera de línea — es
+    // lo correcto, con la pestaña escondida no se está en el aplicativo. Al
+    // volver a ella se late de inmediato para no dejarla ausente un minuto más.
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') latir()
+    }
+    document.addEventListener('visibilitychange', alVolver)
+
+    return () => {
+      window.clearInterval(temporizador)
+      document.removeEventListener('visibilitychange', alVolver)
+    }
+  }, [token, staffId])
+
   const login = async (identifier: string, password: string) => {
     const response = await loginCliente(identifier, password)
     localStorage.setItem(TOKEN_KEY, response.token)
@@ -100,6 +145,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    // Se avisa al servidor para que la cuenta pase a "Fuera de línea" en el
+    // panel del admin ahora mismo, en vez de quedar como presente los tres
+    // minutos que dura la ventana.
+    //
+    // No se espera la respuesta: cerrar sesión debe ser instantáneo para quien
+    // lo pidió, y si la petición se pierde el único costo es que el indicador
+    // tarde esos minutos en caer solo.
+    if (token && staff) {
+      void cerrarSesionStaff(token).catch(() => {})
+    }
+
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
     setCliente(null)

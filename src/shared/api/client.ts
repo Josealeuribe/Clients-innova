@@ -191,6 +191,33 @@ export function cambiarPassword(token: string, actual: string, nueva: string, co
   })
 }
 
+// --- Presencia del personal ---
+//
+// El latido que sostiene el "Activo" del módulo de Personal. Lo manda el panel
+// mientras está abierto (ver AuthContext), porque una cajera puede estar en su
+// puesto veinte minutos sin tocar nada y ese es justo el caso que hay que
+// acertar.
+//
+// Las dos funciones son de mejor esfuerzo: si fallan, no hay nada que mostrarle
+// al usuario — lo único que se pierde es precisión en un indicador. Quien las
+// llama se encarga de ignorar el error.
+export function registrarActividadStaff(token: string) {
+  return request<{ ok: true }>('/auth/actividad', {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
+}
+
+// Apaga la presencia al cerrar sesión, para que la cuenta no siga apareciendo
+// como "Activo" hasta que venza la ventana. NO invalida el token: la sesión es
+// un JWT sin estado (ver POST /api/auth/salir en el backend).
+export function cerrarSesionStaff(token: string) {
+  return request<{ ok: true }>('/auth/salir', {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
+}
+
 // --- Admin ---
 
 export function adminFetchClientes(token: string) {
@@ -201,8 +228,14 @@ export function adminFetchCanjes(token: string) {
   return request<{ canjes: AdminCanjeRow[] }>('/admin/canjes', { headers: authHeaders(token) })
 }
 
+// `ventanaEnLineaSegundos` es el criterio que usó el servidor para decidir
+// `enLinea` en cada fila. Viaja en la respuesta para que el panel pueda
+// explicarlo sin repetir la constante aquí, donde se desincronizaría en cuanto
+// alguien la cambie en el backend. Opcional: la API sin presencia no lo manda.
 export function adminFetchUsuarios(token: string) {
-  return request<{ usuarios: AdminUsuarioRow[] }>('/admin/usuarios', { headers: authHeaders(token) })
+  return request<{ usuarios: AdminUsuarioRow[]; ventanaEnLineaSegundos?: number }>('/admin/usuarios', {
+    headers: authHeaders(token),
+  })
 }
 
 // Genera una clave temporal para una cuenta de personal y obliga a cambiarla

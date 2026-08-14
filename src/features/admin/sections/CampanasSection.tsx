@@ -9,6 +9,8 @@ import {
   Users,
 } from 'lucide-react'
 import type { AdminClienteRow } from '@/shared/api/types'
+import Paginacion from '@/shared/components/Paginacion'
+import { usePaginacion } from '@/shared/hooks/usePaginacion'
 import { AUDIENCIA_LABELS } from '../admin.constants'
 import type { Campana, CampanaEstado, CampanaFormData } from '../admin.types'
 import StatusBadge from '../components/StatusBadge'
@@ -34,6 +36,8 @@ export default function CampanasSection({ clientes }: Props) {
 
   const destinatarios = countAudience(clientes, form.audiencia)
   const segmentos = estimateSmsSegments(form.mensaje)
+
+  const paginacion = usePaginacion(campanas, 'admin.campanas')
 
   const resumen = useMemo(() => ({
     total: campanas.length,
@@ -233,7 +237,7 @@ export default function CampanasSection({ clientes }: Props) {
           </div>
         ) : (
           <div className="grid lg:grid-cols-2 gap-4">
-            {campanas.map((campana) => {
+            {paginacion.visibles.map((campana) => {
               const audienceCount = countAudience(clientes, campana.audiencia)
               return (
                 <div key={campana.id} className="rounded-2xl border border-[#D4AF37]/12 p-5" style={{ background: '#121009' }}>
@@ -290,6 +294,16 @@ export default function CampanasSection({ clientes }: Props) {
             })}
           </div>
         )}
+
+        <Paginacion
+          pagina={paginacion.pagina}
+          totalPaginas={paginacion.totalPaginas}
+          total={paginacion.total}
+          desde={paginacion.desde}
+          hasta={paginacion.hasta}
+          onCambiar={paginacion.setPagina}
+          etiqueta="campañas"
+        />
       </div>
     </div>
   )

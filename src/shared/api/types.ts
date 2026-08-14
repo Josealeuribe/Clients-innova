@@ -160,6 +160,23 @@ export interface AdminUsuarioRow {
   /** Cuántos bonos ha entregado. Sirve para no restablecer a quien no es. */
   canjes: number
   createdAt: string
+  /**
+   * ¿Hay actividad reciente de esta cuenta? Lo decide el servidor, no el
+   * navegador: comparar fechas contra el reloj local daría un estado distinto
+   * en cada equipo mal sincronizado.
+   *
+   * Opcional a propósito. El front y la API son dos servicios de Render que se
+   * despliegan por separado; si esta vista sale antes que la API con presencia,
+   * el campo llega `undefined` y la tarjeta muestra "Sin datos" en vez de
+   * afirmar que alguien está fuera de línea sin saberlo.
+   */
+  enLinea?: boolean
+  /**
+   * Marca cruda de la última señal de vida (ISO). Null si nunca entró o si
+   * cerró sesión. Sirve para decir "hace 12 min", que es lo que distingue
+   * "acaba de salir" de "no ha entrado en todo el turno".
+   */
+  ultimaActividad?: string | null
 }
 
 // La clave temporal viaja UNA sola vez, en esta respuesta: no se guarda en

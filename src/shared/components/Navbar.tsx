@@ -21,8 +21,18 @@ export default function Navbar({ navigate }: Props) {
   const { isAuthenticated, cliente, staff, logout } = useAuth()
   const { page } = useNavigation()
 
-  const displayName = cliente?.nombres || staff?.nombre || ''
   const homePage: Page = staff ? (staff.rol === 'admin' ? 'admin' : 'cajero') : 'dashboard'
+
+  // Antes este botón decía "Hola, {nombre}" y no se entendía a dónde llevaba:
+  // parecía una etiqueta con el nombre puesto, no un acceso. Ahora nombra su
+  // DESTINO, que además cambia según quién entró — el mismo botón lleva a tres
+  // sitios distintos y decir solo "Cuenta" sería mentirle a dos de los tres.
+  const accesoLabel = staff ? (staff.rol === 'admin' ? 'Panel admin' : 'Panel de caja') : 'Mi cuenta'
+
+  // Misma forma que "Cerrar Sesión": los dos son acciones de sesión y estar uno
+  // al lado del otro con formas distintas los hacía ver desparejos.
+  const clasePildora =
+    'inline-flex items-center px-5 py-2 text-sm font-semibold text-[#D4AF37] border border-[#D4AF37]/50 rounded-full hover:bg-[#D4AF37]/10 transition-all'
 
   const handleLogout = () => {
     logout()
@@ -70,14 +80,15 @@ export default function Navbar({ navigate }: Props) {
               <button
                 type="button"
                 onClick={() => navigate(homePage)}
-                className="text-sm font-medium text-[#C4A97A] hover:text-[#D4AF37] transition-colors"
+                className={clasePildora}
+                style={{ letterSpacing: '0.05em' }}
               >
-                Hola, {displayName}
+                {accesoLabel}
               </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex items-center px-5 py-2 text-sm font-semibold text-[#D4AF37] border border-[#D4AF37]/50 rounded-full hover:bg-[#D4AF37]/10 transition-all"
+                className={clasePildora}
                 style={{ letterSpacing: '0.05em' }}
               >
                 Cerrar Sesión
@@ -153,9 +164,9 @@ export default function Navbar({ navigate }: Props) {
                   setMenuOpen(false)
                   navigate(homePage)
                 }}
-                className="text-left text-[#C4A97A] text-sm"
+                className="text-left text-[#D4AF37] text-sm font-semibold border border-[#D4AF37]/40 rounded-full px-4 py-2 w-fit"
               >
-                Hola, {displayName}
+                {accesoLabel}
               </button>
               <button
                 type="button"

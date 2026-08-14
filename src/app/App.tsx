@@ -39,7 +39,12 @@ function AppShell() {
   const setPrizeWon = (prize: string, ticket: string) => setAppState({ prize, ticket })
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#0a0805]">
+    // `overflow-clip` en vez de `overflow-hidden`: recorta igual el fondo
+    // escalado, pero no crea un contenedor de desplazamiento. `hidden` aquí
+    // desactivaba el `position: sticky` de TODO lo que cuelga de este envoltorio
+    // — entre otras cosas, el sidebar de los paneles, que por eso se iba hacia
+    // arriba con la página aunque estuviera declarado como fijo.
+    <div className="min-h-screen relative overflow-clip bg-[#0a0805]">
       {PAGES_WITH_NAVBAR.includes(page) && <Navbar navigate={navigate} />}
 
       {/* Background Image with Blur and Overlay (all pages that share the navbar/footer chrome) */}

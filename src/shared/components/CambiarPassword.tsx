@@ -113,7 +113,10 @@ export function MiCuentaSection() {
   const { staff } = useAuth()
 
   return (
-    <div style={{ animation: 'slide-up 0.4s ease-out forwards' }} className="max-w-lg">
+    // `mx-auto` centra el widget: al quitarle el tope de ancho al contenedor
+    // del panel, esta ficha angosta quedaba pegada al borde izquierdo con todo
+    // el monitor vacío a su derecha.
+    <div style={{ animation: 'slide-up 0.4s ease-out forwards' }} className="max-w-lg w-full mx-auto">
       <div className="mb-6">
         <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>Mi cuenta</h2>
         <p className="text-sm text-[#9A7B50] mt-1">{staff?.nombre}</p>

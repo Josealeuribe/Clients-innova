@@ -14,8 +14,20 @@
   --color-cream-muted: #C4A97A;
 }
 
+/* `clip` y no `hidden`, y la diferencia importa mucho más de lo que parece.
+ *
+ * Los dos recortan lo que se sale de lado — que es para lo que están aquí: el
+ * fondo de la landing va escalado a 1.05 y sin recorte asoma por la derecha.
+ *
+ * Pero `hidden` convierte al elemento en un CONTENEDOR DE DESPLAZAMIENTO, y eso
+ * anula en silencio cualquier `position: sticky` que cuelgue por debajo. Es lo
+ * que tenía al sidebar de los paneles bajándose con la página por más que
+ * estuviera declarado como fijo: el CSS era correcto, el ancestro lo desactivaba.
+ *
+ * `clip` recorta sin crear ese contenedor, así que el sticky vuelve a funcionar
+ * y el recorte se conserva. Mismo efecto visual, sin el daño colateral. */
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
 }
 

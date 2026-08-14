@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
+import { useEstadoPersistido } from '@/shared/hooks/useEstadoPersistido'
 import StaffSidebarLayout from '@/shared/components/StaffSidebarLayout'
 import { CambioPasswordObligatorio, MiCuentaSection } from '@/shared/components/CambiarPassword'
 
@@ -24,7 +25,9 @@ interface Props {
 
 export default function AdminPage({ navigate }: Props) {
   const { staff, token, loading: authLoading } = useAuth()
-  const [section, setSection] = useState<AdminSection>('overview')
+  // La sección sobrevive a recargar: quien estaba revisando Personal no tiene
+  // por qué aparecer de vuelta en Vista General por haber pulsado F5.
+  const [section, setSection] = useEstadoPersistido<AdminSection>('gcc_seccion:admin', 'overview')
 
   useEffect(() => {
     if (authLoading) return
@@ -65,6 +68,7 @@ export default function AdminPage({ navigate }: Props) {
           error={personal.error}
           temporal={personal.temporal}
           reseteando={personal.reseteando}
+          ventanaEnLinea={personal.ventanaEnLinea}
           onRestablecer={personal.restablecer}
           onClearTemporal={personal.clearTemporal}
         />
