@@ -2,6 +2,7 @@ export type AdminSection =
   | 'overview'
   | 'clientes'
   | 'canjes'
+  | 'vigencias'
   | 'campanas'
   | 'personal'
   | 'cuenta'

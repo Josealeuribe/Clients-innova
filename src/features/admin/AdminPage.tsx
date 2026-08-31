@@ -4,6 +4,7 @@ import { useAuth } from '@/shared/context/AuthContext'
 import { useEstadoPersistido } from '@/shared/hooks/useEstadoPersistido'
 import StaffSidebarLayout from '@/shared/components/StaffSidebarLayout'
 import { CambioPasswordObligatorio, MiCuentaSection } from '@/shared/components/CambiarPassword'
+import VigenciasStaffSection from '@/shared/components/VigenciasStaffSection'
 
 
 import { NAV_ITEMS } from './admin.constants'
@@ -54,6 +55,7 @@ export default function AdminPage({ navigate }: Props) {
         !clientesError &&
         section !== 'personal' &&
         section !== 'cuenta' &&
+        section !== 'vigencias' &&
         section !== 'canjes' && (
           <AdminLoading />
         )}
@@ -61,6 +63,7 @@ export default function AdminPage({ navigate }: Props) {
       {section === 'overview' && clientes && <OverviewSection clientes={clientes} />}
       {section === 'clientes' && clientes && <ClientesSection clientes={clientes} />}
       {section === 'canjes' && <CanjesSection canjes={canjes} error={canjesError} />}
+      {section === 'vigencias' && <VigenciasStaffSection />}
       {section === 'campanas' && <CampanasSection clientes={clientes} />}
       {section === 'personal' && (
         <PersonalSection

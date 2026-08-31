@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { X, CircleCheck, Lock, Info } from 'lucide-react'
+import { X, CircleCheck, Lock, Info, CalendarClock } from 'lucide-react'
 import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
 import Footer from '@/shared/components/Footer'
@@ -10,6 +10,9 @@ import Roulette3D from './components/Roulette3D'
 import { PRIZES } from '@/shared/data/prizes'
 import { spinRoulette, fetchGirosRestantes, ApiError } from '@/shared/api/client'
 import { createRouletteSound } from '@/shared/audio/rouletteSound'
+import { useVigencias } from '@/shared/hooks/useVigencias'
+import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
+import { formatVigencia } from '@/shared/utils/vigencia'
 
 interface Props {
   navigate: (page: Page) => void
@@ -51,11 +54,17 @@ function Confetti() {
 
 interface PrizeModalProps {
   segmentIndex: number
+  /**
+   * Hasta cuándo se puede redimir ESTE premio. Null si la consulta de vigencias
+   * no alcanzó a responder: en ese caso no se dice ninguna fecha, en vez de
+   * inventarse una que después no se cumpla.
+   */
+  vigenciaHasta: string | null
   onClaim: () => void
   onClose: () => void
 }
 
-function PrizeModal({ segmentIndex, onClaim, onClose }: PrizeModalProps) {
+function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose }: PrizeModalProps) {
   const prize = PRIZES[segmentIndex]
   const { monetary } = prize
 
@@ -114,6 +123,20 @@ function PrizeModal({ segmentIndex, onClaim, onClose }: PrizeModalProps) {
             </>
           )}
         </div>
+
+        {/* La fecha límite se dice en el momento en que se gana, no solo en el
+            panel de después: es parte de la condición del premio que se acaba
+            de prometer. Sale de la base, así que extender la promoción la
+            actualiza aquí sin tocar este archivo. */}
+        {vigenciaHasta && (
+          <div className="flex items-center justify-center gap-2 mb-6 -mt-3">
+            <CalendarClock size={13} className="text-[#D4AF37] flex-shrink-0" />
+            <p className="text-xs text-[#C4A97A]">
+              Válido para redimir hasta el{' '}
+              <strong className="text-[#D4AF37]">{formatVigencia(vigenciaHasta)}</strong>
+            </p>
+          </div>
+        )}
 
         <button
           type="button"
@@ -243,6 +266,12 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   const [spinError, setSpinError] = useState<string | null>(null)
 
   const { cliente, bono, bonoCanjeado, token, loading: authLoading } = useAuth()
+
+  // Hasta cuándo se puede redimir cada premio. Se consulta al entrar, no al
+  // ganar: el visitante debe poder ver la fecha ANTES de decidir si gira, y
+  // hasta ahora la única forma de conocerla era ganar un bono y entrar a su
+  // cuenta.
+  const { datos: vigencias, error: vigenciasError } = useVigencias()
 
   // La ruleta es SOLO para visitantes sin cuenta: es una promocion de
   // captacion. Cualquier cliente con la sesion abierta queda bloqueado, tenga
@@ -386,6 +415,9 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
       {showModal && wonPrizeIdx !== null && (
         <PrizeModal
           segmentIndex={wonPrizeIdx}
+          vigenciaHasta={
+            vigencias?.vigencias.find((v) => v.clave === PRIZES[wonPrizeIdx]?.clave)?.vigenciaHasta ?? null
+          }
           onClaim={handleClaim}
           onClose={() => setShowModal(false)}
         />
@@ -425,6 +457,13 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             </span>
           </div>
         )}
+
+        {/* Hasta cuándo se puede redimir, dicho antes de girar. La fecha sale
+            de la base (no está escrita aquí), así que extender la promoción se
+            refleja en esta vista sin desplegar el frontend. */}
+        <div className="mt-3 flex justify-center">
+          <VigenciaResumen datos={vigencias} error={vigenciasError} variante="chip" />
+        </div>
       </div>
 
       {/* La ruleta ya no usa SVG ni rotateX. La profundidad proviene de geometría real. */}
@@ -498,6 +537,19 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* El registro completo: qué premio se redime hasta cuándo. No basta con
+          el titular de arriba, porque cada premio lleva SU fecha y pueden
+          convivir varias — hoy coinciden, pero en cuanto entre un bono nuevo con
+          otra fecha esta lista es la única que lo dice sin ambigüedad. */}
+      <div className="mt-8 max-w-lg w-full z-10 relative">
+        <RegistroVigencias
+          datos={vigencias}
+          error={vigenciasError}
+          titulo="Hasta cuándo puedes redimir"
+          descripcion="Cada premio tiene su propia fecha límite. Estas son las condiciones vigentes de la promoción."
+        />
       </div>
 
       <div className="w-full -mx-4 sm:-mx-6 mt-auto pt-20">

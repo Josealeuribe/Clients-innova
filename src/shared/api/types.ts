@@ -49,6 +49,62 @@ export interface BonoInfo {
   premio: PremioInfo
 }
 
+// --- Vigencia de la promoción ---
+//
+// Cada premio tiene SU PROPIA fecha de vencimiento: pueden convivir un bono que
+// vence el 30 de septiembre con otro que se lance después y venza en noviembre.
+// Por eso el contrato es una LISTA y no una fecha suelta.
+
+export interface VigenciaPremio {
+  clave: string
+  nombre: string
+  detalle: string
+  monetario: boolean
+  /** Hasta cuándo se puede redimir un bono de este premio (ISO). */
+  vigenciaHasta: string
+  /** Lo decide el servidor con SU reloj, no el del equipo que mira la pantalla. */
+  vencido: boolean
+  /** Días completos que faltan, contados por fecha de calendario colombiana. */
+  diasRestantes: number
+  sede: Sede | null
+  /** Bonos de este premio que siguen sin redimir. */
+  bonosPendientes: number
+}
+
+export interface VigenciasResponse {
+  vigencias: VigenciaPremio[]
+  /**
+   * La fecha única de toda la promoción, cuando todos los premios coinciden —
+   * hoy es el caso. Null en cuanto entre un premio con fecha distinta, y ahí la
+   * vista debe mostrar el detalle premio por premio.
+   *
+   * Viaja calculada desde el servidor para que las cuatro pantallas que la
+   * muestran no lleguen cada una a su propia conclusión.
+   */
+  vigenciaComun: string | null
+  /** La última fecha en juego: hasta cuándo queda algo vivo de la promoción. */
+  vigenciaMaxima: string | null
+  /** Hora del servidor. Se compara contra esta y no contra el reloj local. */
+  consultadoEn: string
+}
+
+// Una entrada del registro de cambios de vigencia. Solo la ve el personal: es
+// auditoría interna ("quién movió la fecha y cuándo"), no una condición de la
+// promoción.
+export interface CambioVigenciaRow {
+  id: number
+  premio: { clave: string; nombre: string }
+  anterior: string
+  nueva: string
+  /** true si alargó la promoción, false si la acortó. Lo decide el servidor. */
+  extiende: boolean
+  motivo: string
+  /** Bonos ya entregados que se arrastraron con el cambio. */
+  bonosAfectados: number
+  registradoPor: string
+  creadoEn: string
+}
+
 // Contrato explícito de participación. Hoy es deducible de `bono`, pero la
 // ruleta pregunta "¿ya participó?" y no debería tener que inferirlo del
 // estado del bono.
@@ -156,6 +212,14 @@ export interface AdminUsuarioRow {
   rol: 'admin' | 'cajero'
   activo: boolean
   sede: string | null
+  /**
+   * Identificador estable del casino (av-5, avenida-0, ventura-plaza). Null
+   * para el admin, que no pertenece a uno.
+   *
+   * El panel agrupa por esta clave y no por `sede`: agrupar por el nombre
+   * comercial haría que renombrar un casino partiera su grupo en dos.
+   */
+  sedeClave?: string | null
   debeCambiarPassword: boolean
   /** Cuántos bonos ha entregado. Sirve para no restablecer a quien no es. */
   canjes: number
@@ -172,11 +236,18 @@ export interface AdminUsuarioRow {
    */
   enLinea?: boolean
   /**
-   * Marca cruda de la última señal de vida (ISO). Null si nunca entró o si
-   * cerró sesión. Sirve para decir "hace 12 min", que es lo que distingue
-   * "acaba de salir" de "no ha entrado en todo el turno".
+   * Última vez que se le vio (ISO). Null significa UNA sola cosa: nunca ha
+   * entrado. Cerrar sesión ya NO la borra — antes sí, y por eso quien acababa
+   * de salir aparecía como "nunca ha entrado".
    */
   ultimaActividad?: string | null
+  /**
+   * Última vez que cerró sesión (ISO), o null si no lo ha hecho desde su
+   * última actividad. Con las dos fechas se puede decir por qué no está: si se
+   * fue por su cuenta o si simplemente dejó de dar señales (navegador cerrado
+   * de golpe, sin internet, equipo apagado).
+   */
+  sesionCerradaEn?: string | null
 }
 
 // La clave temporal viaja UNA sola vez, en esta respuesta: no se guarda en

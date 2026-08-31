@@ -13,6 +13,8 @@ import type {
   GirosRestantes,
   DepartamentoApi,
   ResetPasswordResponse,
+  VigenciasResponse,
+  CambioVigenciaRow,
 } from './types'
 
 export class ApiError extends Error {}
@@ -118,6 +120,28 @@ export function fetchGirosRestantes() {
     ...CON_COOKIE_DE_VISITANTE,
     headers: cabeceraVisitante(),
   }).then(guardarVisitante)
+}
+
+// --- Vigencia de la promoción ---
+//
+// Hasta cuándo se puede redimir cada premio. Es la MISMA llamada para las
+// cuatro vistas que lo muestran (ruleta pública, panel de cliente, de cajero y
+// de admin): la fecha sale de la base, no está escrita en ninguna pantalla, así
+// que extender la promoción se ve en todas a la vez sin desplegar el frontend.
+//
+// Sin token a propósito: la ruleta la ve gente sin cuenta, y saber hasta cuándo
+// puede redimir es justo lo que necesita ANTES de girar.
+export function fetchVigencias() {
+  return request<VigenciasResponse>('/promocion/vigencias')
+}
+
+// Registro de cambios de vigencia: quién movió cada fecha, cuándo y por qué.
+// Solo personal (admin y cajero) — es auditoría interna. La cajera también lo
+// necesita: es quien recibe el "a mí me dijeron otra fecha" en el mostrador.
+export function fetchHistorialVigencias(token: string) {
+  return request<{ cambios: CambioVigenciaRow[] }>('/promocion/historial', {
+    headers: authHeaders(token),
+  })
 }
 
 // Departamentos y municipios: los sirve el backend desde la tabla contra la

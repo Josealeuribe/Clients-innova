@@ -1,5 +1,7 @@
 import { CircleCheck, Clock, Gift, Users } from 'lucide-react'
 import type { AdminClienteRow } from '@/shared/api/types'
+import { useVigencias } from '@/shared/hooks/useVigencias'
+import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
 import { buildAdminStats } from '../utils/adminStats'
 import { formatDate } from '../utils/adminFormatters'
 
@@ -8,6 +10,10 @@ interface Props {
 }
 
 export default function OverviewSection({ clientes }: Props) {
+  // La vigencia va en la primera pantalla del admin, no escondida en su
+  // sección: "Bonos pendientes: 22" cambia de significado por completo según si
+  // el plazo para redimirlos vence mañana o el mes entrante.
+  const { datos: vigencias, error: vigenciasError } = useVigencias()
   const stats = buildAdminStats(clientes)
   if (!stats) return null
 
@@ -19,6 +25,8 @@ export default function OverviewSection({ clientes }: Props) {
         </h2>
         <p className="text-sm text-[#9A7B50] mt-1">Estado real de la promoción "Gira y Gana"</p>
       </div>
+
+      <VigenciaResumen datos={vigencias} error={vigenciasError} className="mb-6" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
@@ -79,6 +87,19 @@ export default function OverviewSection({ clientes }: Props) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* El registro premio por premio, con cuántos bonos vivos quedan en cada
+          uno. Es lo que convierte la fecha en una decisión: un premio que vence
+          con 8 clientes esperando pide una campaña; uno con 0 no pide nada. */}
+      <div className="mt-6">
+        <RegistroVigencias
+          datos={vigencias}
+          error={vigenciasError}
+          mostrarPendientes
+          titulo="Vigencia por premio"
+          descripcion="Hasta cuándo se redime cada uno. El historial de cambios está en la sección Vigencias."
+        />
       </div>
     </div>
   )

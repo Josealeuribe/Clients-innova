@@ -3,7 +3,10 @@ import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
 import BackButton from '@/shared/components/BackButton'
 import logoImg from '@/shared/assets/images/LOGO-CASINO.png'
-import { Home, Gift, Layers, Trophy, History, User, LogOut, ChevronRight, CircleCheck, MapPin, type LucideIcon } from 'lucide-react'
+import { Home, Gift, Layers, Trophy, History, User, LogOut, ChevronRight, CircleCheck, MapPin, CalendarClock, type LucideIcon } from 'lucide-react'
+import { useVigencias } from '@/shared/hooks/useVigencias'
+import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
+import { colorVigencia, estadoDeVigencia, formatVigencia, textoRestante } from '@/shared/utils/vigencia'
 
 interface Props {
   navigate: (page: Page) => void
@@ -67,6 +70,50 @@ function ComingSoon({ icon: Icon, title, message }: { icon: LucideIcon; title: s
   )
 }
 
+// Hasta cuándo puede redimir ESTE cliente SU bono.
+//
+// La fecha sale de `bono.vigenciaHasta`, que es la copia que el bono se llevó al
+// crearse — no la del catálogo. Importa la diferencia: si la promoción se
+// extiende, al cliente se le muestra la fecha que rige para él, y no una general
+// que podría no aplicarle.
+//
+// `ahoraServidor` es la hora del servidor. En los equipos y celulares con el
+// reloj desajustado, comparar contra la hora local haría ver vencido un bono que
+// no lo está — y eso manda a alguien a caja creyendo que perdió su premio.
+function VigenciaDelBono({
+  vigenciaHasta,
+  ahoraServidor,
+  redimido,
+}: {
+  vigenciaHasta: string
+  ahoraServidor: string | null
+  redimido: boolean
+}) {
+  const estado = estadoDeVigencia(vigenciaHasta, ahoraServidor)
+
+  // Ya redimido: la fecha es un dato del comprobante, no una cuenta regresiva.
+  // Poner "vencido" en rojo sobre un bono ya entregado solo asusta sin motivo.
+  const color = redimido ? '#9A7B50' : colorVigencia(estado)
+
+  return (
+    <div
+      className="mt-4 rounded-xl border p-4"
+      style={{ borderColor: `${color}35`, background: `${color}10` }}
+    >
+      <p className="text-xs font-bold tracking-wider mb-1.5 flex items-center gap-1.5" style={{ color }}>
+        <CalendarClock size={13} /> {redimido ? 'VIGENCIA QUE TENÍA' : 'VÁLIDO PARA REDIMIR HASTA'}
+      </p>
+      <p className="text-sm font-semibold text-[#F5E6C8]">{formatVigencia(vigenciaHasta)}</p>
+      {!redimido && (
+        <p className="text-xs mt-0.5" style={{ color }}>
+          {textoRestante(estado)}
+          {estado.vencido && ' · ya no puede redimirse en caja'}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function NoBonoYet({ navigate }: { navigate: (page: Page) => void }) {
   return (
     <div className="rounded-2xl border border-[#D4AF37]/15 p-10 text-center flex flex-col items-center gap-4"
@@ -88,6 +135,10 @@ function NoBonoYet({ navigate }: { navigate: (page: Page) => void }) {
 
 export default function DashboardPage({ navigate }: Props) {
   const { cliente, bono, logout } = useAuth()
+  // Vigencia de la promoción. Se pide siempre, tenga bono el cliente o no: si
+  // todavía no ha ganado, la fecha es justo lo que le dice hasta cuándo puede
+  // intentarlo, y antes no había dónde verla.
+  const { datos: vigencias, error: vigenciasError } = useVigencias()
   const [section, setSection] = useState<DashSection>('home')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const displayName = cliente?.nombres?.split(' ')[0] || 'Cliente'
@@ -208,6 +259,11 @@ export default function DashboardPage({ navigate }: Props) {
                 <p className="text-[#9A7B50] text-sm mt-1">Este es el estado real de tu cuenta</p>
               </div>
 
+              {/* Vigencia de la promoción, arriba de todo. Es el dato con fecha
+                  de caducidad de esta pantalla: si vence, deja de importar todo
+                  lo demás que hay debajo. */}
+              <VigenciaResumen datos={vigencias} error={vigenciasError} className="mb-6" />
+
               {/* Prize notification */}
               {bono && (
                 <div className="rounded-2xl border border-[#D4AF37]/35 p-5 mb-6 flex items-center gap-4"
@@ -310,10 +366,32 @@ export default function DashboardPage({ navigate }: Props) {
                   ) : (
                     <p className="text-xs text-[#6B5D3F] mt-4">Preséntate en caja con tu documento y este código para redimirlo.</p>
                   )}
+
+                  {/* La fecha de SU bono, no la del catálogo: es la condición
+                      con la que se le entregó. */}
+                  <VigenciaDelBono
+                    vigenciaHasta={bono.vigenciaHasta}
+                    ahoraServidor={vigencias?.consultadoEn ?? null}
+                    redimido={bonoRedimido}
+                  />
                 </div>
               ) : (
                 <NoBonoYet navigate={navigate} />
               )}
+
+              {/* El registro completo. Va también aquí, y no solo cuando el
+                  cliente ya tiene un bono: cada premio lleva su propia fecha, y
+                  quien todavía no ha ganado necesita saber hasta cuándo aplica
+                  cada uno. */}
+              <div className="mt-6">
+                <RegistroVigencias
+                  datos={vigencias}
+                  error={vigenciasError}
+                  claveDestacada={bono?.premio.clave ?? null}
+                  titulo="Vigencia de la promoción"
+                  descripcion="Hasta cuándo se puede redimir cada premio de la ruleta Gira y Gana."
+                />
+              </div>
             </div>
           )}
 
@@ -348,6 +426,9 @@ export default function DashboardPage({ navigate }: Props) {
                     {bono.sedeRedencion && (
                       <span className="col-span-2">Sede: <span className="text-[#C4A97A]">{bono.sedeRedencion.nombre}</span></span>
                     )}
+                    <span className="col-span-2">
+                      Válido hasta: <span className="text-[#C4A97A]">{formatVigencia(bono.vigenciaHasta)}</span>
+                    </span>
                   </div>
                 </div>
               ) : (
@@ -401,6 +482,11 @@ export default function DashboardPage({ navigate }: Props) {
                             {bono.sedeRedencion
                               ? `Preséntate en ${bono.sedeRedencion.nombre} con tu documento.`
                               : 'Preséntate en caja con tu documento.'}
+                          </p>
+                          {/* El plazo cierra el historial: es el único paso que
+                              todavía depende del cliente y tiene fecha límite. */}
+                          <p className="text-xs mt-0.5" style={{ color: colorVigencia(estadoDeVigencia(bono.vigenciaHasta, vigencias?.consultadoEn ?? null)) }}>
+                            Tienes plazo hasta el {formatVigencia(bono.vigenciaHasta)}
                           </p>
                         </>
                       )}
