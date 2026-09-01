@@ -244,7 +244,7 @@ export default function CampanasSection({ clientes }: Props) {
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <h4 className="font-bold text-[#F5E6C8] truncate">{campana.nombre || 'Campaña sin nombre'}</h4>
+                        <h4 className="font-bold text-[#F5E6C8] break-words">{campana.nombre || 'Campaña sin nombre'}</h4>
                         <StatusBadge
                           label={campana.estado === 'preparada' ? 'Preparada' : 'Borrador'}
                           color={campana.estado === 'preparada' ? '#22c55e' : '#eab308'}

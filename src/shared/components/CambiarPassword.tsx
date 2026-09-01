@@ -126,7 +126,7 @@ export function MiCuentaSection() {
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between gap-4">
             <span className="text-[#6B5D3F]">Usuario</span>
-            <span className="text-[#C4A97A] truncate">{staff?.email}</span>
+            <span className="text-[#C4A97A] break-all text-right">{staff?.email}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-[#6B5D3F]">Rol</span>

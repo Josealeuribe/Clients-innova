@@ -20,6 +20,50 @@ interface Props {
   onClearTemporal: () => void
 }
 
+// Clave con la que se agrupa a quien no pertenece a ningún casino (el admin).
+const SIN_SEDE = '__sin_sede__'
+
+// Los tres casinos, en el orden en que se quieren ver, con el nombre corto que
+// se usa como título del grupo.
+//
+// POR QUÉ EL ORDEN VIVE AQUÍ Y NO SALE DE LA BASE
+//
+// La tabla `sedes` tiene una columna `orden`, pero hoy pone Ventura Plaza de
+// primera y ese orden manda en otras pantallas (el select del cajero). Este
+// panel se pide expresamente con Avenida 0 al frente, que además es donde está
+// la mayor parte del personal. Cambiar `orden` en la base para conseguirlo
+// habría reordenado esas otras pantallas de rebote.
+//
+// Se agrupa por `clave` y no por el nombre comercial: la clave es estable, así
+// que renombrar un casino no parte su grupo en dos.
+const ORDEN_SEDES: { clave: string; titulo: string }[] = [
+  { clave: 'avenida-0', titulo: 'Avenida 0' },
+  { clave: 'av-5', titulo: 'Avenida 5' },
+  { clave: 'ventura-plaza', titulo: 'Ventura Plaza' },
+  { clave: SIN_SEDE, titulo: 'Administración' },
+]
+
+function ordenDeGrupo(clave: string): number {
+  const indice = ORDEN_SEDES.findIndex((s) => s.clave === clave)
+  // Una sede que no esté en la lista va al final en vez de desaparecer: si
+  // mañana abren un cuarto casino, su personal se sigue viendo.
+  return indice === -1 ? ORDEN_SEDES.length : indice
+}
+
+// A qué grupo pertenece una cuenta.
+//
+// `sedeClave` es opcional porque puede faltar si responde una API anterior; en
+// ese caso se cae al nombre de la sede, que es lo único disponible. Sin este
+// respaldo, TODAS las cajeras aparecerían bajo "Administración".
+function claveDeGrupo(usuario: AdminUsuarioRow): string {
+  if (usuario.sedeClave !== undefined) return usuario.sedeClave ?? SIN_SEDE
+  return usuario.sede ?? SIN_SEDE
+}
+
+function tituloDeGrupo(clave: string, usuario: AdminUsuarioRow): string {
+  return ORDEN_SEDES.find((s) => s.clave === clave)?.titulo ?? usuario.sede ?? 'Sin casino asignado'
+}
+
 // Iniciales para el avatar. Se toman el primer nombre y el primer apellido, no
 // las dos primeras palabras: "José Alejandro Uribe" debe dar JU y no JA.
 function iniciales(nombre: string): string {
@@ -29,17 +73,85 @@ function iniciales(nombre: string): string {
   return `${partes[0]![0]}${partes[partes.length - 1]![0]}`.toUpperCase()
 }
 
-// Presentes primero, y dentro de cada grupo los admin antes que las cajeras.
-//
-// El orden lo decide la vista y no el backend porque depende de la presencia,
-// que cambia cada pocos segundos: reordenar en el servidor obligaría a rehacer
-// la consulta por algo puramente visual.
+// Por casino primero; dentro de cada uno, los presentes arriba y luego por
+// nombre. Ordenar por grupo ANTES de paginar es lo que mantiene cada casino
+// junto: si no, una página podría mezclar cuentas de los tres.
 function ordenarParaMonitoreo(usuarios: AdminUsuarioRow[]): AdminUsuarioRow[] {
   return [...usuarios].sort((a, b) => {
+    const grupoA = ordenDeGrupo(claveDeGrupo(a))
+    const grupoB = ordenDeGrupo(claveDeGrupo(b))
+    if (grupoA !== grupoB) return grupoA - grupoB
     if (!!a.enLinea !== !!b.enLinea) return a.enLinea ? -1 : 1
-    if (a.rol !== b.rol) return a.rol === 'admin' ? -1 : 1
     return a.nombre.localeCompare(b.nombre, 'es')
   })
+}
+
+interface Grupo {
+  clave: string
+  titulo: string
+  /** Las cuentas de este grupo que caen en la página actual. */
+  visibles: AdminUsuarioRow[]
+  /** Cuántas tiene el grupo en total, aunque la página muestre solo algunas. */
+  total: number
+  activos: number
+}
+
+function agrupar(visibles: AdminUsuarioRow[], todos: AdminUsuarioRow[]): Grupo[] {
+  const grupos = new Map<string, Grupo>()
+
+  // Los totales se cuentan sobre la lista COMPLETA: "6 cuentas · 2 activas"
+  // debe seguir siendo cierto aunque la página muestre solo tres.
+  for (const usuario of todos) {
+    const clave = claveDeGrupo(usuario)
+    const grupo = grupos.get(clave) ?? {
+      clave,
+      titulo: tituloDeGrupo(clave, usuario),
+      visibles: [],
+      total: 0,
+      activos: 0,
+    }
+    grupo.total += 1
+    if (usuario.enLinea) grupo.activos += 1
+    grupos.set(clave, grupo)
+  }
+
+  for (const usuario of visibles) {
+    grupos.get(claveDeGrupo(usuario))?.visibles.push(usuario)
+  }
+
+  return Array.from(grupos.values())
+    .filter((grupo) => grupo.visibles.length > 0)
+    .sort((a, b) => ordenDeGrupo(a.clave) - ordenDeGrupo(b.clave))
+}
+
+// Por qué esta cuenta no está, dicho con precisión.
+//
+// Distinguir "cerró sesión" de "dejó de dar señales" es el punto de tener dos
+// fechas: la primera es una salida ordenada, la segunda es un navegador cerrado
+// de golpe, un internet caído o un equipo apagado. Para quien vigila un turno
+// no son lo mismo.
+function detallePresencia(usuario: AdminUsuarioRow): string {
+  if (usuario.enLinea === undefined) return 'La API todavía no informa presencia'
+  if (usuario.enLinea) return 'Con sesión abierta y el panel a la vista'
+  if (!usuario.ultimaActividad) return 'Nunca ha iniciado sesión'
+
+  return cerroSesion(usuario)
+    ? `Cerró sesión ${formatDesdeAhora(usuario.sesionCerradaEn)}`
+    : `Sin señal desde ${formatDesdeAhora(usuario.ultimaActividad)}`
+}
+
+// La salida cuenta solo si ocurrió DESPUÉS de la última actividad. Si volvió a
+// entrar luego, la actividad nueva manda y la salida vieja ya no dice nada.
+function cerroSesion(usuario: AdminUsuarioRow): boolean {
+  if (!usuario.sesionCerradaEn || !usuario.ultimaActividad) return false
+  return new Date(usuario.sesionCerradaEn) >= new Date(usuario.ultimaActividad)
+}
+
+// Texto corto que acompaña a la insignia cuando la cuenta no está.
+function resumenAusencia(usuario: AdminUsuarioRow): string {
+  if (!usuario.ultimaActividad) return 'nunca ha entrado'
+  if (cerroSesion(usuario)) return `salió ${formatDesdeAhora(usuario.sesionCerradaEn)}`
+  return formatDesdeAhora(usuario.ultimaActividad)
 }
 
 export default function PersonalSection({
@@ -60,6 +172,8 @@ export default function PersonalSection({
 
   const ordenados = usuarios ? ordenarParaMonitoreo(usuarios) : null
   const paginacion = usePaginacion(ordenados, 'admin.personal')
+  const grupos = ordenados ? agrupar(paginacion.visibles, ordenados) : []
+
   // `enLinea` puede llegar undefined si la API todavía no tiene presencia; en
   // ese caso no se cuenta a nadie como presente y el resumen se calla.
   const conPresencia = ordenados?.some((u) => u.enLinea !== undefined) ?? false
@@ -73,11 +187,11 @@ export default function PersonalSection({
           <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
             Personal
           </h2>
-          <p className="text-sm text-[#9A7B50] mt-1">Cuentas con acceso al sistema y su estado</p>
+          <p className="text-sm text-[#9A7B50] mt-1">Cuentas con acceso al sistema, por casino</p>
         </div>
 
-        {/* Resumen de turno: cuántos están dentro ahora mismo. Es el dato que se
-            busca al abrir esta sección para monitorear. */}
+        {/* Resumen de turno: cuántos están dentro ahora mismo, en todo el
+            sistema. Es el dato que se busca al abrir esta sección. */}
         {ordenados && conPresencia && (
           <div className="flex items-center gap-2.5 rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/5 px-4 py-2.5">
             <span className="relative flex h-2 w-2 flex-shrink-0">
@@ -109,8 +223,9 @@ export default function PersonalSection({
             <p className="text-[#9A7B50]">
               <span className="text-[#C4A97A] font-semibold">Activo</span> significa que la cuenta dio señales de
               vida{minutosVentana ? ` en los últimos ${minutosVentana} min` : ' hace poco'} — sesión abierta y panel
-              a la vista. Si alguien cierra el navegador de golpe o se queda sin internet, nadie alcanza a avisar y
-              su estado tarda esos minutos en caer solo.
+              a la vista. Cuando no está, se dice si <span className="text-[#C4A97A]">cerró sesión</span> o si
+              simplemente <span className="text-[#C4A97A]">dejó de dar señales</span>: lo segundo es un navegador
+              cerrado de golpe, un internet caído o un equipo apagado, y tarda esos minutos en caer solo.
             </p>
           )}
         </div>
@@ -122,7 +237,7 @@ export default function PersonalSection({
             <CircleCheck size={18} className="text-[#22c55e] flex-shrink-0 mt-0.5" />
             <div className="min-w-0">
               <p className="text-sm text-[#F5E6C8] font-semibold">Contraseña temporal de {temporal.nombre}</p>
-              <p className="text-xs text-[#9A7B50] mt-0.5 truncate">{temporal.email}</p>
+              <p className="text-xs text-[#9A7B50] mt-0.5 break-words">{temporal.email}</p>
             </div>
           </div>
 
@@ -163,134 +278,142 @@ export default function PersonalSection({
       {!usuarios && !error && <AdminLoading label="Cargando personal..." />}
 
       {/*
-        TARJETAS Y NO TABLA, PARA QUITAR LA BARRA DE DESPLAZAMIENTO LATERAL
+        UN BLOQUE POR CASINO
 
-        Antes esto era una tabla de siete columnas con `min-w-[760px]` dentro de
-        un `overflow-x-auto`. Con el sidebar de 240 px comiendo ancho, en
-        cualquier portátil la tabla no cabía y aparecía la barra horizontal:
-        había que arrastrar para ver el botón de restablecer, y en celular la
-        vista era inservible. Agregar el estado de presencia como octava columna
-        solo lo habría empeorado.
+        Las tarjetas siguen siendo tarjetas —es lo que permitió quitar la barra
+        de desplazamiento horizontal— pero ahora van repartidas bajo el título
+        de su casino, que es como se piensa el personal: por turno y por sede.
 
-        Una rejilla de tarjetas no tiene ancho mínimo que romper: reflowea a una
-        columna cuando hace falta y NUNCA desborda. La barra lateral no se oculta
-        con CSS — se elimina la causa, que era el ancho fijo.
+        Los grupos se calculan sobre la página actual, así que el tope de 20 se
+        respeta igual; como el orden agrupa antes de paginar, un casino nunca
+        aparece partido en dos sitios de la misma página.
       */}
-      {ordenados && ordenados.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {/* El resumen de arriba cuenta sobre la lista COMPLETA, no sobre la
-              página: "3 activos de 15" seguiría siendo cierto aunque solo se
-              estén viendo veinte tarjetas. */}
-          {paginacion.visibles.map((usuario) => (
-            <article
-              key={usuario.id}
-              className="rounded-2xl border p-4 flex flex-col gap-3 transition-colors"
-              style={{
-                background: '#121009',
-                // El borde verde tenue distingue a quien está dentro sin tener
-                // que leer cada insignia una por una.
-                borderColor: usuario.enLinea ? 'rgba(34,197,94,0.28)' : 'rgba(212,175,55,0.12)',
-              }}
+      {grupos.map((grupo) => (
+        <section key={grupo.clave} className="mb-8 last:mb-0">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3 pb-2 border-b border-[#D4AF37]/12">
+            <h3
+              className="text-sm font-black text-[#D4AF37] uppercase"
+              style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '0.12em' }}
             >
-              <header className="flex items-start gap-3">
-                <div
-                  className="h-10 w-10 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0"
-                  style={
-                    usuario.rol === 'admin'
-                      ? { background: 'linear-gradient(135deg, #D4AF37, #A0832A)', color: '#0a0805' }
-                      : { background: 'rgba(212,175,55,0.1)', color: '#C4A97A', border: '1px solid rgba(212,175,55,0.2)' }
-                  }
-                >
-                  {iniciales(usuario.nombre)}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  {/* `truncate` + `min-w-0` es lo que impide que un nombre o un
-                      correo largo estire la tarjeta y devuelva el desborde
-                      horizontal que se acaba de quitar. */}
-                  <p className="text-sm font-semibold text-[#F5E6C8] truncate" title={usuario.nombre}>
-                    {usuario.nombre}
-                  </p>
-                  <p className="text-xs text-[#9A7B50] truncate" title={usuario.email}>
-                    {usuario.email}
-                  </p>
-                </div>
-              </header>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <PresenciaBadge
-                  enLinea={usuario.enLinea}
-                  detalle={
-                    usuario.enLinea
-                      ? 'Con sesión abierta y el panel a la vista'
-                      : `Última actividad: ${formatDesdeAhora(usuario.ultimaActividad)}`
-                  }
-                />
-                {/* Solo se muestra cuando NO está: para quien está dentro el
-                    "hace un momento" es ruido. */}
-                {usuario.enLinea === false && (
-                  <span className="text-xs text-[#6B5D3F]">{formatDesdeAhora(usuario.ultimaActividad)}</span>
-                )}
-              </div>
-
-              {/* Ficha en dos columnas: nunca se sale del ancho de la tarjeta. */}
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs pt-1">
-                <div className="min-w-0">
-                  <dt className="text-[#6B5D3F] mb-0.5">Rol</dt>
-                  <dd className="text-[#C4A97A] capitalize truncate">{usuario.rol}</dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="text-[#6B5D3F] mb-0.5">Sede</dt>
-                  <dd className="text-[#C4A97A] truncate" title={usuario.sede ?? undefined}>
-                    {usuario.sede || '—'}
-                  </dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="text-[#6B5D3F] mb-0.5">Bonos entregados</dt>
-                  <dd className="text-[#C4A97A]">{usuario.canjes}</dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="text-[#6B5D3F] mb-0.5">Contraseña</dt>
-                  <dd
-                    className="inline-flex items-center gap-1"
-                    style={{ color: usuario.debeCambiarPassword ? '#eab308' : '#22c55e' }}
-                  >
-                    {usuario.debeCambiarPassword ? (
-                      <><TriangleAlert size={12} className="flex-shrink-0" /> Pendiente</>
-                    ) : (
-                      <><ShieldCheck size={12} className="flex-shrink-0" /> Propia</>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-
-              {/* `activo` en la base significa "la cuenta está habilitada", que
-                  NO es lo mismo que estar conectado. Se nombra "Deshabilitada"
-                  justamente para que no se confunda con el "Activo" de arriba. */}
-              {!usuario.activo && (
-                <p className="inline-flex items-center gap-1.5 text-xs text-[#ef4444]">
-                  <Ban size={12} className="flex-shrink-0" /> Cuenta deshabilitada: no puede iniciar sesión
-                </p>
+              {grupo.titulo}
+            </h3>
+            <p className="text-xs text-[#6B5D3F]">
+              {grupo.total} {grupo.total === 1 ? 'cuenta' : 'cuentas'}
+              {conPresencia && (
+                <>
+                  {' · '}
+                  <span style={{ color: grupo.activos > 0 ? '#22c55e' : '#6B5D3F' }}>
+                    {grupo.activos} {grupo.activos === 1 ? 'activa' : 'activas'}
+                  </span>
+                </>
               )}
+              {/* Solo se aclara cuando la paginación partió el grupo, para que
+                  el conteo de arriba no parezca equivocado. */}
+              {grupo.visibles.length !== grupo.total && ` · mostrando ${grupo.visibles.length}`}
+            </p>
+          </div>
 
-              <footer className="mt-auto pt-1">
-                <button
-                  type="button"
-                  onClick={() => void onRestablecer(usuario)}
-                  disabled={reseteando === usuario.id}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs text-[#9A7B50] border border-[#D4AF37]/20 hover:text-[#D4AF37] hover:border-[#D4AF37]/45 transition-all disabled:opacity-60"
-                >
-                  {reseteando === usuario.id ? (
-                    <><Loader2 size={13} className="animate-spin" /> Generando...</>
-                  ) : (
-                    <><KeyRound size={13} /> Restablecer clave</>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {grupo.visibles.map((usuario) => (
+              <article
+                key={usuario.id}
+                className="rounded-2xl border p-4 flex flex-col gap-3 transition-colors"
+                style={{
+                  background: '#121009',
+                  // El borde verde tenue distingue a quien está dentro sin tener
+                  // que leer cada insignia una por una.
+                  borderColor: usuario.enLinea ? 'rgba(34,197,94,0.28)' : 'rgba(212,175,55,0.12)',
+                }}
+              >
+                <header className="flex items-start gap-3">
+                  <div
+                    className="h-10 w-10 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0"
+                    style={
+                      usuario.rol === 'admin'
+                        ? { background: 'linear-gradient(135deg, #D4AF37, #A0832A)', color: '#0a0805' }
+                        : { background: 'rgba(212,175,55,0.1)', color: '#C4A97A', border: '1px solid rgba(212,175,55,0.2)' }
+                    }
+                  >
+                    {iniciales(usuario.nombre)}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    {/* `break-words` y no `truncate`: el nombre y el correo se
+                        parten en varias lineas si hacen falta, pero se leen
+                        completos. Recortarlos ahorraba dos pixeles y escondia el
+                        usuario de acceso de una cajera, que es justo el dato que
+                        se viene a buscar aqui. */}
+                    <p className="text-sm font-semibold text-[#F5E6C8] break-words" title={usuario.nombre}>
+                      {usuario.nombre}
+                    </p>
+                    <p className="text-xs text-[#9A7B50] break-words" title={usuario.email}>
+                      {usuario.email}
+                    </p>
+                  </div>
+                </header>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <PresenciaBadge enLinea={usuario.enLinea} detalle={detallePresencia(usuario)} />
+                  {/* Solo se muestra cuando NO está: para quien está dentro el
+                      "hace un momento" es ruido. */}
+                  {usuario.enLinea === false && (
+                    <span className="text-xs text-[#6B5D3F]">{resumenAusencia(usuario)}</span>
                   )}
-                </button>
-              </footer>
-            </article>
-          ))}
-        </div>
-      )}
+                </div>
+
+                {/* Ficha en dos columnas: nunca se sale del ancho de la tarjeta. */}
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs pt-1">
+                  <div className="min-w-0">
+                    <dt className="text-[#6B5D3F] mb-0.5">Rol</dt>
+                    <dd className="text-[#C4A97A] capitalize">{usuario.rol}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-[#6B5D3F] mb-0.5">Bonos entregados</dt>
+                    <dd className="text-[#C4A97A]">{usuario.canjes}</dd>
+                  </div>
+                  <div className="min-w-0 col-span-2">
+                    <dt className="text-[#6B5D3F] mb-0.5">Contraseña</dt>
+                    <dd
+                      className="inline-flex items-center gap-1"
+                      style={{ color: usuario.debeCambiarPassword ? '#eab308' : '#22c55e' }}
+                    >
+                      {usuario.debeCambiarPassword ? (
+                        <><TriangleAlert size={12} className="flex-shrink-0" /> Pendiente de cambio</>
+                      ) : (
+                        <><ShieldCheck size={12} className="flex-shrink-0" /> Propia</>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+
+                {/* `activo` en la base significa "la cuenta está habilitada", que
+                    NO es lo mismo que estar conectado. Se nombra "Deshabilitada"
+                    justamente para que no se confunda con el "Activo" de arriba. */}
+                {!usuario.activo && (
+                  <p className="inline-flex items-center gap-1.5 text-xs text-[#ef4444]">
+                    <Ban size={12} className="flex-shrink-0" /> Cuenta deshabilitada: no puede iniciar sesión
+                  </p>
+                )}
+
+                <footer className="mt-auto pt-1">
+                  <button
+                    type="button"
+                    onClick={() => void onRestablecer(usuario)}
+                    disabled={reseteando === usuario.id}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs text-[#9A7B50] border border-[#D4AF37]/20 hover:text-[#D4AF37] hover:border-[#D4AF37]/45 transition-all disabled:opacity-60"
+                  >
+                    {reseteando === usuario.id ? (
+                      <><Loader2 size={13} className="animate-spin" /> Generando...</>
+                    ) : (
+                      <><KeyRound size={13} /> Restablecer clave</>
+                    )}
+                  </button>
+                </footer>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
 
       <Paginacion
         pagina={paginacion.pagina}

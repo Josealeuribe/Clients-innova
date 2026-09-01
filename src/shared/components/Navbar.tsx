@@ -18,7 +18,7 @@ const NAV_LINKS: { label: string; page: Page }[] = [
 
 export default function Navbar({ navigate }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { isAuthenticated, cliente, staff, logout } = useAuth()
+  const { isAuthenticated, staff, logout } = useAuth()
   const { page } = useNavigation()
 
   const homePage: Page = staff ? (staff.rol === 'admin' ? 'admin' : 'cajero') : 'dashboard'
@@ -52,8 +52,12 @@ export default function Navbar({ navigate }: Props) {
         >
           <img src={logoImg} alt="Gran Casino Cucuta" className="h-16 w-auto" />
           <span className="text-lg sm:text-xl font-black tracking-wider whitespace-nowrap">
-            <span style={{ color: '#F5E6C8' }}>GRAN CASINO</span>{' '}
-            <span style={{ color: '#D4AF37' }}>CUCUTA</span>
+          {/* CUCUTA va mas pequeno y pegado a CASINO: los tres forman un solo
+              bloque de marca en vez de tres palabras del mismo peso. El tamano va
+              en em y no en un valor fijo para que siga la escala del contenedor,
+              que crece en el punto de corte sm. */}
+          <span style={{ color: '#F5E6C8' }}>GRAN CASINO</span>
+          <span className="text-[0.7em] ml-0.5" style={{ color: '#D4AF37' }}>CUCUTA</span>
           </span>
         </button>
 

@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import type { CanjeHistorialRow } from '@/shared/api/types'
 import Paginacion from '@/shared/components/Paginacion'
+import TablaResponsiva, { type ColumnaTabla } from '@/shared/components/TablaResponsiva'
 import { usePaginacion } from '@/shared/hooks/usePaginacion'
 import CajeroError from '../components/CajeroError'
 import CajeroLoading from '../components/CajeroLoading'
@@ -13,9 +15,58 @@ interface Props {
 }
 
 export default function HistorialSection({ historial, error, soloPropios }: Props) {
-  // Clave distinta según el alcance: el historial propio de una cajera y el
+  // "Canjeado por" solo aparece cuando se ven los canjes de todos: en el
+  // historial propio de una cajera siempre seria ella misma.
+  const columnas = useMemo<ColumnaTabla<CanjeHistorialRow>[]>(() => {
+    const base: ColumnaTabla<CanjeHistorialRow>[] = [
+      {
+        etiqueta: 'Código',
+        ancho: 'w-[16%]',
+        principal: true,
+        celda: (i) => <span className="text-[#D4AF37] font-mono font-semibold">{i.codigo}</span>,
+      },
+      {
+        etiqueta: 'Premio',
+        ancho: 'w-[22%]',
+        celda: (i) => <span className="text-[#C4A97A]">{i.premio.nombre}</span>,
+      },
+      {
+        etiqueta: 'Cliente',
+        ancho: 'w-[24%]',
+        celda: (i) => (
+          <>
+            <span className="block text-[#F5E6C8]">{i.cliente.nombres} {i.cliente.apellidos}</span>
+            <span className="block text-xs text-[#6B5D3F]">{i.cliente.docNumero}</span>
+          </>
+        ),
+      },
+      {
+        etiqueta: 'Sede',
+        ancho: soloPropios ? 'w-[20%]' : 'w-[16%]',
+        celda: (i) => <span className="text-[#C4A97A]">{i.sede || '—'}</span>,
+      },
+    ]
+
+    if (!soloPropios) {
+      base.push({
+        etiqueta: 'Canjeado por',
+        ancho: 'w-[12%]',
+        celda: (i) => <span className="text-[#9A7B50]">{i.canjeadoPor || '—'}</span>,
+      })
+    }
+
+    base.push({
+      etiqueta: 'Fecha',
+      ancho: soloPropios ? 'w-[18%]' : 'w-[10%]',
+      celda: (i) => <span className="text-[#6B5D3F]">{i.canjeadoEn ? formatDateTime(i.canjeadoEn) : '—'}</span>,
+    })
+
+    return base
+  }, [soloPropios])
+
+  // Clave distinta segun el alcance: el historial propio de una cajera y el
   // listado completo que ve el admin son dos listas de largo distinto, y
-  // compartir la página entre ambas dejaría a una de las dos fuera de rango.
+  // compartir la pagina entre ambas dejaria a una de las dos fuera de rango.
   const { visibles, pagina, setPagina, totalPaginas, total, desde, hasta } = usePaginacion(
     historial,
     soloPropios ? 'cajero.historial.propios' : 'cajero.historial.todos',
@@ -41,69 +92,12 @@ export default function HistorialSection({ historial, error, soloPropios }: Prop
 
       {historial && (
         <>
-          {/* Sin ancho mínimo ni `overflow-x-auto`: la tabla mide lo que su
-              contenedor y las columnas menos críticas se retiran al angostarse.
-              En el mostrador esto importa el doble — la cajera trabaja de pie y
-              arrastrar una tabla de lado a lado con el cliente enfrente era
-              tiempo perdido. */}
-          <div className="rounded-2xl border border-[#D4AF37]/12" style={{ background: '#121009' }}>
-            <table className="w-full text-sm table-fixed">
-              <thead>
-                <tr className="text-left text-xs text-[#6B5D3F] border-b border-[#D4AF37]/12">
-                  <th className="px-4 py-3 font-medium w-[28%] sm:w-[18%]">Código</th>
-                  <th className="px-4 py-3 font-medium w-[32%] sm:w-[22%]">Premio</th>
-                  <th className="px-4 py-3 font-medium w-[40%] sm:w-[24%]">Cliente</th>
-                  <th className="px-4 py-3 font-medium hidden lg:table-cell lg:w-[16%]">Sede</th>
-                  {!soloPropios && (
-                    <th className="px-4 py-3 font-medium hidden xl:table-cell xl:w-[12%]">Canjeado por</th>
-                  )}
-                  <th className="px-4 py-3 font-medium hidden md:table-cell md:w-[18%] lg:w-[14%]">Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibles.map((item) => (
-                  <tr key={item.codigo} className="border-b border-[#D4AF37]/8 last:border-0 align-top">
-                    <td className="px-4 py-3 text-[#D4AF37] font-mono truncate" title={item.codigo}>
-                      {item.codigo}
-                    </td>
-                    <td className="px-4 py-3 text-[#C4A97A] truncate" title={item.premio.nombre}>
-                      {item.premio.nombre}
-                    </td>
-                    <td className="px-4 py-3 text-[#F5E6C8]">
-                      <span
-                        className="block truncate"
-                        title={`${item.cliente.nombres} ${item.cliente.apellidos}`}
-                      >
-                        {item.cliente.nombres} {item.cliente.apellidos}
-                      </span>
-                      <span className="block truncate text-xs text-[#6B5D3F]">{item.cliente.docNumero}</span>
-                    </td>
-                    <td className="px-4 py-3 text-[#C4A97A] hidden lg:table-cell truncate" title={item.sede ?? ''}>
-                      {item.sede || '—'}
-                    </td>
-                    {!soloPropios && (
-                      <td
-                        className="px-4 py-3 text-[#9A7B50] hidden xl:table-cell truncate"
-                        title={item.canjeadoPor ?? ''}
-                      >
-                        {item.canjeadoPor || '—'}
-                      </td>
-                    )}
-                    <td className="px-4 py-3 text-[#6B5D3F] hidden md:table-cell truncate">
-                      {item.canjeadoEn ? formatDateTime(item.canjeadoEn) : '—'}
-                    </td>
-                  </tr>
-                ))}
-                {visibles.length === 0 && (
-                  <tr>
-                    <td colSpan={soloPropios ? 5 : 6} className="px-4 py-10 text-center text-[#6B5D3F] text-sm">
-                      {soloPropios ? 'Todavía no has entregado ningún bono.' : 'Aún no se ha canjeado ningún bono.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <TablaResponsiva
+            columnas={columnas}
+            filas={visibles}
+            claveDe={(i) => i.codigo}
+            vacio={soloPropios ? 'Todavía no has entregado ningún bono.' : 'Aún no se ha canjeado ningún bono.'}
+          />
 
           <Paginacion
             pagina={pagina}

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import type { AdminCanjeRow } from '@/shared/api/types'
 import Paginacion from '@/shared/components/Paginacion'
+import TablaResponsiva, { type ColumnaTabla } from '@/shared/components/TablaResponsiva'
 import { usePaginacion } from '@/shared/hooks/usePaginacion'
 import AdminError from '../components/AdminError'
 import AdminLoading from '../components/AdminLoading'
@@ -12,12 +13,60 @@ interface Props {
   error: string | null
 }
 
+// Los nombres de las sedes se parecen mucho entre si ("Gran Casino Cucuta Av. 5"
+// y "Gran Casino Cucuta Ventura Plaza"), asi que cortarlos los volvia
+// indistinguibles: los dos quedaban como "Gran Casino Cucuta...". En una
+// auditoria de canjes, saber en que casino se entrego el bono ES el dato.
+const COLUMNAS: ColumnaTabla<AdminCanjeRow>[] = [
+  {
+    etiqueta: 'Código',
+    ancho: 'w-[12%]',
+    principal: true,
+    celda: (c) => <span className="text-[#D4AF37] font-mono font-semibold">{c.codigo}</span>,
+  },
+  {
+    etiqueta: 'Cliente',
+    ancho: 'w-[20%]',
+    celda: (c) => (
+      <>
+        <span className="block text-[#F5E6C8]">{c.cliente.nombres} {c.cliente.apellidos}</span>
+        <span className="block text-xs text-[#6B5D3F]">{c.cliente.docTipo}: {c.cliente.docNumero}</span>
+      </>
+    ),
+  },
+  {
+    etiqueta: 'Premio',
+    ancho: 'w-[16%]',
+    celda: (c) => <span className="text-[#C4A97A]">{c.premio.nombre}</span>,
+  },
+  {
+    etiqueta: 'Sede',
+    ancho: 'w-[15%]',
+    celda: (c) => <span className="text-[#C4A97A]">{c.sede || '—'}</span>,
+  },
+  {
+    etiqueta: 'Cajero',
+    ancho: 'w-[15%]',
+    celda: (c) => <span className="text-[#9A7B50]">{c.canjeadoPor || '—'}</span>,
+  },
+  {
+    etiqueta: 'Entregado',
+    ancho: 'w-[14%]',
+    celda: (c) => <span className="text-[#6B5D3F]">{c.canjeadoEn ? formatDateTime(c.canjeadoEn) : '—'}</span>,
+  },
+  {
+    etiqueta: 'Demora',
+    ancho: 'w-[8%]',
+    celda: (c) => <span className="text-[#6B5D3F]">{formatDemora(c.horasHastaCanje)}</span>,
+  },
+]
+
 export default function CanjesSection({ canjes, error }: Props) {
   const [search, setSearch] = useState('')
 
-  // Devuelve null —y no []— mientras se carga: para la paginación no es lo
-  // mismo "no hay canjes" que "todavía no se sabe". Con [] daría por buena una
-  // sola página y borraría la página guardada antes de que lleguen los datos.
+  // Devuelve null —y no []— mientras se carga: para la paginacion no es lo
+  // mismo "no hay canjes" que "todavia no se sabe". Con [] daria por buena una
+  // sola pagina y borraria la pagina guardada antes de que lleguen los datos.
   const filtered = useMemo(() => {
     if (!canjes) return null
     const q = search.trim().toLowerCase()
@@ -65,73 +114,16 @@ export default function CanjesSection({ canjes, error }: Props) {
             />
           </div>
 
-          {/* Siete columnas eran las que peor cabían: de aquí salía el
-              `min-w-[900px]`. Con `table-fixed` la tabla mide lo que su
-              contenedor y las columnas de auditoría fina (sede, cajero, fecha,
-              demora) se van retirando por prioridad al angostarse. Código,
-              cliente y premio no se ocultan nunca. */}
-          <div className="rounded-2xl border border-[#D4AF37]/12" style={{ background: '#121009' }}>
-            <table className="w-full text-sm table-fixed">
-              <thead>
-                <tr className="text-left text-xs text-[#6B5D3F] border-b border-[#D4AF37]/12">
-                  <th className="px-4 py-3 font-medium w-[28%] sm:w-[16%] lg:w-[12%]">Código</th>
-                  <th className="px-4 py-3 font-medium w-[42%] sm:w-[30%] lg:w-[22%]">Cliente</th>
-                  <th className="px-4 py-3 font-medium w-[30%] sm:w-[22%] lg:w-[18%]">Premio</th>
-                  <th className="px-4 py-3 font-medium hidden lg:table-cell lg:w-[14%]">Sede</th>
-                  <th className="px-4 py-3 font-medium hidden lg:table-cell lg:w-[14%]">Cajero</th>
-                  <th className="px-4 py-3 font-medium hidden xl:table-cell xl:w-[13%]">Entregado</th>
-                  <th className="px-4 py-3 font-medium hidden xl:table-cell xl:w-[7%]">Demora</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibles.map((canje) => (
-                  <tr key={canje.codigo} className="border-b border-[#D4AF37]/8 last:border-0 align-top">
-                    <td className="px-4 py-3 text-[#D4AF37] font-mono truncate" title={canje.codigo}>
-                      {canje.codigo}
-                    </td>
-                    <td className="px-4 py-3 text-[#F5E6C8]">
-                      <span
-                        className="block truncate"
-                        title={`${canje.cliente.nombres} ${canje.cliente.apellidos}`}
-                      >
-                        {canje.cliente.nombres} {canje.cliente.apellidos}
-                      </span>
-                      <span className="block truncate text-xs text-[#6B5D3F]">
-                        {canje.cliente.docTipo}: {canje.cliente.docNumero}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-[#C4A97A] truncate" title={canje.premio.nombre}>
-                      {canje.premio.nombre}
-                    </td>
-                    <td className="px-4 py-3 text-[#C4A97A] hidden lg:table-cell truncate" title={canje.sede ?? ''}>
-                      {canje.sede || '—'}
-                    </td>
-                    <td
-                      className="px-4 py-3 text-[#9A7B50] hidden lg:table-cell truncate"
-                      title={canje.canjeadoPor ?? ''}
-                    >
-                      {canje.canjeadoPor || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-[#6B5D3F] hidden xl:table-cell truncate">
-                      {canje.canjeadoEn ? formatDateTime(canje.canjeadoEn) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-[#6B5D3F] hidden xl:table-cell truncate">
-                      {formatDemora(canje.horasHastaCanje)}
-                    </td>
-                  </tr>
-                ))}
-                {visibles.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center text-[#6B5D3F] text-sm">
-                      {canjes.length === 0
-                        ? 'Todavía no se ha entregado ningún bono.'
-                        : 'No se encontraron canjes con ese criterio.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <TablaResponsiva
+            columnas={COLUMNAS}
+            filas={visibles}
+            claveDe={(c) => c.codigo}
+            vacio={
+              canjes.length === 0
+                ? 'Todavía no se ha entregado ningún bono.'
+                : 'No se encontraron canjes con ese criterio.'
+            }
+          />
 
           <Paginacion
             pagina={pagina}
