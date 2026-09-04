@@ -22,16 +22,67 @@ export default function PrizesPage({ navigate }: Props) {
           sedes de Gran Casino Cúcuta, completando tu registro.
         </p>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* LA FICHA DE CADA PREMIO, EN BLOQUES
+            Antes era icono + título + todo el detalle en un párrafo corrido. En
+            los premios cortos se leía bien, pero el cartón de bingo acumula seis
+            hechos distintos (qué es, dónde, qué día, a qué hora, quién canta,
+            dónde se redime) y quedaba como un muro de texto donde había que
+            leerlo entero para encontrar la hora.
+
+            Ahora cada cosa tiene su sitio: cabecera con el tipo, la descripción,
+            el destacado si lo hay, y los datos sueltos en lista. Los premios que
+            no traen destacado ni notas se ven igual que antes, solo con más
+            aire. */}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {PRIZES.map((prize) => (
             <div
               key={prize.clave}
-              className="rounded-2xl p-6 border border-[#D4AF37]/20 hover:border-[#D4AF37]/45 transition-all flex flex-col"
+              className="flex flex-col rounded-2xl border border-[#D4AF37]/20 p-6 transition-all hover:border-[#D4AF37]/45"
               style={{ background: 'linear-gradient(145deg, #1C1810, #121009)' }}
             >
-              <prize.icon size={32} className="text-[#D4AF37] mb-4" />
-              <h3 className="text-lg font-bold text-[#F5E6C8] mb-2">{prize.prize}</h3>
-              <p className="text-sm text-[#9A7B50] leading-relaxed">{prize.detail}</p>
+              {/* Cabecera: el ícono y el tipo en la misma línea. El tipo importa
+                  — un bono es dinero de juego y una cortesía no. */}
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <prize.icon size={32} className="flex-shrink-0 text-[#D4AF37]" />
+                <span
+                  className="flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider"
+                  style={{
+                    color: prize.monetary ? '#D4AF37' : '#9A7B50',
+                    background: prize.monetary ? 'rgba(212,175,55,0.12)' : 'rgba(154,123,80,0.12)',
+                  }}
+                >
+                  {prize.monetary ? 'BONO' : 'CORTESÍA'}
+                </span>
+              </div>
+
+              <h3 className="mb-2 text-lg font-bold leading-tight text-[#F5E6C8]">{prize.prize}</h3>
+              <p className="text-sm leading-relaxed text-[#9A7B50]">{prize.detail}</p>
+
+              {prize.destacado && (
+                <div
+                  className="mt-4 rounded-xl border border-[#D4AF37]/35 p-3.5"
+                  style={{ background: 'rgba(212,175,55,0.10)' }}
+                >
+                  <p className="text-sm font-black text-[#D4AF37]">{prize.destacado.titulo}</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-[#C4A97A]">
+                    {prize.destacado.texto}
+                  </p>
+                </div>
+              )}
+
+              {prize.notas && prize.notas.length > 0 && (
+                <ul className="mt-4 flex flex-col gap-2 border-t border-[#D4AF37]/12 pt-4">
+                  {prize.notas.map((nota) => (
+                    <li key={nota} className="flex gap-2 text-xs leading-relaxed text-[#9A7B50]">
+                      {/* El punto va como elemento aparte y no como `list-disc`
+                          para que el texto de varias líneas quede alineado bajo
+                          sí mismo y no debajo del punto. */}
+                      <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-[#D4AF37]" />
+                      <span>{nota}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </div>

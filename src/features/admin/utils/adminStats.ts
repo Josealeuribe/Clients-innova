@@ -14,6 +14,26 @@ export function buildAdminStats(clientes: AdminClienteRow[] | null) {
     porPremio.set(nombre, (porPremio.get(nombre) || 0) + 1)
   }
 
+  // DOS ESTADÍSTICAS SEPARADAS, A PROPÓSITO
+  //
+  // Los premios GENERALES son los que el sistema reparte equilibrando las 3
+  // sedes. Los PROMOCIONALES son una campaña extraordinaria de una sola sede
+  // (hoy el bingo de Ventura Plaza).
+  //
+  // Mezclarlos rompe las dos lecturas: Ventura Plaza aparecería como la sede
+  // con más premios solo por la campaña, y quien mire el panel concluiría que
+  // el reparto sigue desbalanceado cuando no lo está. Por eso el reparto por
+  // sede se mide ÚNICAMENTE sobre los generales — igual que lo hace el sorteo
+  // en el servidor (ver server/src/utils/sorteoPremios.ts).
+  const generales = conBono.filter((c) => !c.bono!.promocion)
+  const promocionales = conBono.filter((c) => c.bono!.promocion)
+
+  const porSedeGenerales = new Map<string, number>()
+  for (const cliente of generales) {
+    const sede = cliente.bono!.sedeRedencion ?? 'Sin sede'
+    porSedeGenerales.set(sede, (porSedeGenerales.get(sede) || 0) + 1)
+  }
+
   return {
     totalClientes: clientes.length,
     sinBono: clientes.length - conBono.length,
@@ -21,6 +41,11 @@ export function buildAdminStats(clientes: AdminClienteRow[] | null) {
     reclamados: reclamados.length,
     porPremio: Array.from(porPremio.entries()).sort((a, b) => b[1] - a[1]),
     recientes: clientes.slice(0, 5),
+    // Premios generales por sede: la medida del equilibrio entre casinos.
+    porSedeGenerales: Array.from(porSedeGenerales.entries()).sort((a, b) => b[1] - a[1]),
+    totalGenerales: generales.length,
+    totalPromocionales: promocionales.length,
+    promocionalesPendientes: promocionales.filter((c) => c.bono!.estado === 'pendiente').length,
   }
 }
 

@@ -11,6 +11,10 @@ import { PRIZES } from '@/shared/data/prizes'
 import { spinRoulette, fetchGirosRestantes, ApiError } from '@/shared/api/client'
 import { createRouletteSound } from '@/shared/audio/rouletteSound'
 import { useVigencias } from '@/shared/hooks/useVigencias'
+import { usePromoBingo } from '@/shared/hooks/usePromoBingo'
+import { useBloquearScroll } from '@/shared/hooks/useBloquearScroll'
+import BingoPromoBanner from '@/shared/components/BingoPromoBanner'
+import BonoBingoAviso from '@/shared/components/BonoBingoAviso'
 import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
 import { formatVigencia } from '@/shared/utils/vigencia'
 
@@ -68,6 +72,11 @@ function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose }: PrizeModa
   const prize = PRIZES[segmentIndex]
   const { monetary } = prize
 
+  // Congela la pagina de atras: sin esto la rueda del raton seguia desplazando
+  // el contenido detras del modal. Mismo criterio en los tres modales de esta
+  // vista, para que se comporten igual.
+  useBloquearScroll(true)
+
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center p-4"
@@ -107,6 +116,20 @@ function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose }: PrizeModa
           {prize.prize}
         </h2>
         <p className="text-[#9A7B50] text-sm mb-2">{prize.detail}</p>
+
+        {/* El destacado del premio (hoy: la moto del bingo). El detalle del
+            cartón se acortó para que la ficha del catálogo no fuera un muro de
+            texto, así que la moto se muestra aquí como bloque propio — es lo
+            más emocionante que se le puede decir a quien acaba de ganarlo. */}
+        {prize.destacado && (
+          <div
+            className="mt-3 mb-1 rounded-xl border border-[#D4AF37]/35 p-3"
+            style={{ background: 'rgba(212,175,55,0.10)' }}
+          >
+            <p className="text-sm font-black text-[#D4AF37]">{prize.destacado.titulo}</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-[#C4A97A]">{prize.destacado.texto}</p>
+          </div>
+        )}
 
         <div className="my-5 mx-auto w-3/4 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
 
@@ -176,6 +199,8 @@ interface YaParticipasteModalProps {
 // ruleta no vuelve a girar: se le explica por que en vez de dejarlo girar y
 // fallar despues al reclamar.
 function YaParticipasteModal({ tieneBono, bonoCanjeado, codigo, onClose, onVerCuenta }: YaParticipasteModalProps) {
+  useBloquearScroll(true)
+
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.82)' }}>
       <div
@@ -272,6 +297,11 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   // hasta ahora la única forma de conocerla era ganar un bono y entrar a su
   // cuenta.
   const { datos: vigencias, error: vigenciasError } = useVigencias()
+
+  // Campaña del bingo. El bloque va DEBAJO de la rueda y del botón de girar, no
+  // encima: la ruleta es la funcionalidad de esta pantalla y nada debe taparla
+  // ni robarle el clic.
+  const { promo: promoBingo } = usePromoBingo()
 
   // La ruleta es SOLO para visitantes sin cuenta: es una promocion de
   // captacion. Cualquier cliente con la sesion abierta queda bloqueado, tenga
@@ -464,6 +494,19 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         <div className="mt-3 flex justify-center">
           <VigenciaResumen datos={vigencias} error={vigenciasError} variante="chip" />
         </div>
+
+        {/* Justo debajo, el del cartón de bingo: mismo formato, porque son dos
+            condiciones del mismo premio. Este abre el detalle de las dos vías
+            (jugar el 5 de septiembre o dejarlo en espera hasta su vigencia),
+            que no caben en una línea. */}
+        <div className="mt-2 flex justify-center">
+          <BonoBingoAviso
+            promo={promoBingo}
+            vigenciaHasta={
+              vigencias?.vigencias.find((v) => v.clave === 'carton-bingo')?.vigenciaHasta ?? null
+            }
+          />
+        </div>
       </div>
 
       {/* La ruleta ya no usa SVG ni rotateX. La profundidad proviene de geometría real. */}
@@ -519,26 +562,6 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         </p>
       </div>
 
-      {/* Se mantiene visible siempre (girando o no) — el jugador debe poder
-          seguir viendo todos los premios en juego en todo momento. */}
-      <div className="mt-10 max-w-lg w-full z-10 relative">
-        <p className="text-center text-[#6B5D3F] text-xs mb-4 tracking-wider uppercase">
-          Premios en juego
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {PRIZES.map((prize) => (
-            <div
-              key={prize.clave}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#D4AF37]/10 text-xs text-[#9A7B50]"
-              style={{ background: 'rgba(18,16,9,0.7)', backdropFilter: 'blur(4px)' }}
-            >
-              <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: prize.color }} />
-              <span className="truncate">{prize.label} {prize.sublabel}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* El registro completo: qué premio se redime hasta cuándo. No basta con
           el titular de arriba, porque cada premio lleva SU fecha y pueden
           convivir varias — hoy coinciden, pero en cuanto entre un bono nuevo con
@@ -551,6 +574,14 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
           descripcion="Cada premio tiene su propia fecha límite. Estas son las condiciones vigentes de la promoción."
         />
       </div>
+
+      {/* Promoción del bingo, al final del flujo. Queda por debajo de la
+          ruleta a propósito: aquí el protagonista es girar. */}
+      {promoBingo && (
+        <div className="mt-10 w-full max-w-3xl z-10 relative">
+          <BingoPromoBanner promo={promoBingo} />
+        </div>
+      )}
 
       <div className="w-full -mx-4 sm:-mx-6 mt-auto pt-20">
         <Footer navigate={navigate} />

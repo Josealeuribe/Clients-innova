@@ -49,6 +49,67 @@ export default function OverviewSection({ clientes }: Props) {
         ))}
       </div>
 
+      {/* REPARTO ENTRE CASINOS — solo premios generales.
+          Los cartones de la campaña de bingo se cuentan aparte: son de una sola
+          sede y mezclarlos haría ver a Ventura Plaza como desbalanceada cuando
+          no lo está. */}
+      <div className="rounded-2xl border border-[#D4AF37]/12 p-5 mb-6" style={{ background: '#121009' }}>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 className="font-bold text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Reparto de premios generales por casino
+            </h3>
+            <p className="text-xs text-[#6B5D3F] mt-1">
+              El sistema favorece a la sede más atrasada en cada giro, así que esto tiende a igualarse.
+            </p>
+          </div>
+          {stats.totalPromocionales > 0 && (
+            <div className="rounded-xl border border-[#6A00B8]/30 px-3 py-2" style={{ background: 'rgba(106,0,184,0.10)' }}>
+              <p className="text-[10px] text-[#C77DFF] font-bold tracking-wider">CAMPAÑA BINGO (APARTE)</p>
+              <p className="text-sm text-[#F5E6C8] font-bold mt-0.5">
+                {stats.totalPromocionales} cartón{stats.totalPromocionales === 1 ? '' : 'es'}
+                <span className="text-xs font-normal text-[#9A7B50]">
+                  {' '}· {stats.promocionalesPendientes} sin redimir
+                </span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {stats.porSedeGenerales.length === 0 ? (
+          <p className="text-sm text-[#6B5D3F]">Aún no se ha asignado ningún premio general.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {stats.porSedeGenerales.map(([sede, cantidad]) => {
+              const porcentaje = stats.totalGenerales
+                ? Math.round((cantidad / stats.totalGenerales) * 100)
+                : 0
+              // 33% es el reparto perfecto entre 3 sedes. Se marca la desviación
+              // para que el desbalance se vea sin tener que calcularlo.
+              const desvio = porcentaje - 33
+              const color = Math.abs(desvio) <= 8 ? '#22c55e' : Math.abs(desvio) <= 18 ? '#eab308' : '#ef4444'
+              return (
+                <div key={sede}>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-[#C4A97A]">{sede}</span>
+                    <span className="text-xs">
+                      <span className="font-bold" style={{ color }}>{cantidad}</span>
+                      <span className="text-[#6B5D3F]"> · {porcentaje}%</span>
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(212,175,55,0.10)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${porcentaje}%`, background: color }} />
+                  </div>
+                </div>
+              )
+            })}
+            <p className="text-[10px] text-[#4A3D28] mt-1">
+              Reparto ideal entre 3 casinos: 33% cada uno · {stats.totalGenerales} premios generales en total.
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="rounded-2xl border border-[#D4AF37]/12 p-5" style={{ background: '#121009' }}>
           <h3 className="font-bold text-[#F5E6C8] mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>

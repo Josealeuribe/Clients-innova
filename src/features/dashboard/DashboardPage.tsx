@@ -3,8 +3,10 @@ import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
 import BackButton from '@/shared/components/BackButton'
 import logoImg from '@/shared/assets/images/LOGO-CASINO.png'
-import { Home, Gift, Layers, Trophy, History, User, LogOut, ChevronRight, CircleCheck, MapPin, CalendarClock, type LucideIcon } from 'lucide-react'
+import { Home, Gift, Layers, Trophy, History, User, LogOut, ChevronRight, CircleCheck, MapPin, CalendarClock, Bike, type LucideIcon } from 'lucide-react'
 import { useVigencias } from '@/shared/hooks/useVigencias'
+import { usePromoBingo } from '@/shared/hooks/usePromoBingo'
+import BingoPromoBanner from '@/shared/components/BingoPromoBanner'
 import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
 import { colorVigencia, estadoDeVigencia, formatVigencia, textoRestante } from '@/shared/utils/vigencia'
 
@@ -114,6 +116,72 @@ function VigenciaDelBono({
   )
 }
 
+// Aviso del evento, cuando el bono ganado es un cartón de una campaña.
+//
+// Un cartón no se parece a un bono de dinero: no se redime cuando se pueda, da
+// acceso a algo que pasa un día a una hora en un casino concreto. Si el cliente
+// no ve esos tres datos en su cuenta, llega tarde o llega a la sede equivocada.
+function EventoDelBono({
+  eventoEn,
+  sede,
+  premioEvento,
+}: {
+  eventoEn: string
+  sede: string | null
+  /** La moto que se juega en el evento. Viene de la campaña, no está escrita aquí. */
+  premioEvento?: { nombre: string; gancho: string; descripcion: string }
+}) {
+  const cuando = new Date(eventoEn)
+  const fecha = cuando.toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  })
+  const hora = cuando.toLocaleTimeString('es-CO', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Bogota',
+  })
+  const yaPaso = cuando.getTime() < Date.now()
+
+  return (
+    <div className="mt-4 rounded-xl border border-[#6A00B8]/35 p-4" style={{ background: 'rgba(106,0,184,0.10)' }}>
+      <p className="text-xs font-bold tracking-wider text-[#C77DFF] mb-1.5 flex items-center gap-1.5">
+        <Layers size={13} /> {yaPaso ? 'EVENTO YA REALIZADO' : 'TU EVENTO'}
+      </p>
+      <p className="text-sm font-semibold text-[#F5E6C8] capitalize">{fecha}</p>
+      <p className="text-xs text-[#C4A97A] mt-0.5">
+        {hora} · hora de Colombia
+      </p>
+
+      {/* El premio mayor del evento. Si ya pasó no se muestra: recordarle a
+          alguien la moto que se jugó ayer no le aporta nada. */}
+      {premioEvento && !yaPaso && (
+        <div
+          className="mt-3 rounded-lg border border-[#D4AF37]/35 p-3"
+          style={{ background: 'rgba(212,175,55,0.10)' }}
+        >
+          <p className="flex items-center gap-1.5 text-xs font-black text-[#D4AF37]">
+            <Bike size={13} className="flex-shrink-0" /> {premioEvento.gancho}
+          </p>
+          <p className="mt-1 text-sm font-bold text-[#F5E6C8]">{premioEvento.nombre}</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-[#C4A97A]">{premioEvento.descripcion}</p>
+        </div>
+      )}
+
+      {/* La restricción de sede se dice explícitamente en el bono, no solo en
+          caja: enterarse en el mostrador de que el cartón no sirve ahí es
+          enterarse demasiado tarde. */}
+      <p className="text-xs text-[#9A7B50] mt-2">
+        Válido únicamente en <strong className="text-[#F5E6C8]">{sede ?? 'Casino Ventura Plaza'}</strong>.
+        Preséntate con tu documento y este código.
+      </p>
+    </div>
+  )
+}
+
 function NoBonoYet({ navigate }: { navigate: (page: Page) => void }) {
   return (
     <div className="rounded-2xl border border-[#D4AF37]/15 p-10 text-center flex flex-col items-center gap-4"
@@ -139,6 +207,9 @@ export default function DashboardPage({ navigate }: Props) {
   // todavía no ha ganado, la fecha es justo lo que le dice hasta cuándo puede
   // intentarlo, y antes no había dónde verla.
   const { datos: vigencias, error: vigenciasError } = useVigencias()
+  // Campaña del bingo. En variante compacta: aquí compite con el bono del
+  // cliente, que es lo que vino a ver.
+  const { promo: promoBingo } = usePromoBingo()
   const [section, setSection] = useState<DashSection>('home')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const displayName = cliente?.nombres?.split(' ')[0] || 'Cliente'
@@ -264,6 +335,8 @@ export default function DashboardPage({ navigate }: Props) {
                   lo demás que hay debajo. */}
               <VigenciaResumen datos={vigencias} error={vigenciasError} className="mb-6" />
 
+              {promoBingo && <BingoPromoBanner promo={promoBingo} variante="compacto" className="mb-6" />}
+
               {/* Prize notification */}
               {bono && (
                 <div className="rounded-2xl border border-[#D4AF37]/35 p-5 mb-6 flex items-center gap-4"
@@ -374,6 +447,16 @@ export default function DashboardPage({ navigate }: Props) {
                     ahoraServidor={vigencias?.consultadoEn ?? null}
                     redimido={bonoRedimido}
                   />
+
+                  {/* Si el bono salió de una campaña con evento (el cartón de
+                      bingo), la fecha, la hora y el casino del evento. */}
+                  {bono.eventoEn && (
+                    <EventoDelBono
+                      eventoEn={bono.eventoEn}
+                      sede={bono.sedeRedencion?.nombre ?? null}
+                      premioEvento={promoBingo?.premioEvento}
+                    />
+                  )}
                 </div>
               ) : (
                 <NoBonoYet navigate={navigate} />
@@ -392,6 +475,10 @@ export default function DashboardPage({ navigate }: Props) {
                   descripcion="Hasta cuándo se puede redimir cada premio de la ruleta Gira y Gana."
                 />
               </div>
+
+              {/* La campaña del bingo también en la vista del bono: es donde el
+                  cliente mira qué tiene y qué más puede conseguir. */}
+              {promoBingo && <BingoPromoBanner promo={promoBingo} variante="compacto" className="mt-6" />}
             </div>
           )}
 

@@ -11,6 +11,22 @@ export interface RoulettePrize {
   prize: string
   icon: LucideIcon
   detail: string
+  /**
+   * Bloque destacado del premio, cuando hay algo que merece salir del párrafo.
+   * Hoy solo lo usa el cartón de bingo, para la moto que se juega en el evento.
+   */
+  destacado?: { titulo: string; texto: string }
+  /**
+   * Datos sueltos del premio: fecha, hora, quién lo presenta, restricciones.
+   *
+   * POR QUÉ UNA LISTA Y NO MÁS TEXTO EN `detail`
+   *
+   * El cartón de bingo acumula seis hechos distintos (qué es, dónde, qué día, a
+   * qué hora, quién canta, dónde se redime). Metidos en un solo párrafo había
+   * que leerlo entero para encontrar la hora. En lista, cada dato se localiza
+   * de un vistazo — que es como se lee la ficha de un premio.
+   */
+  notas?: string[]
   monetary: boolean
   weight: number
 }
@@ -57,13 +73,28 @@ export const PRIZES: RoulettePrize[] = [
   },
   {
     clave: 'carton-bingo',
-    label: 'Cartón',
-    sublabel: 'Bingo',
+    // Campaña del 5 de septiembre de 2026 (ver server/src/config/promoBingo.ts).
+    // La fecha va en la etiqueta porque es una entrada a un evento con día y
+    // hora, no un bono que se redime cuando se pueda: el jugador tiene que
+    // verla desde la ruleta, antes de ganarlo.
+    label: 'CARTÓN BINGO',
+    sublabel: '5 SEP 2026',
     color: '#3D006B',
     lightColor: '#6A00B8',
-    prize: 'Cartón de Bingo Premium',
+    prize: 'Cartón Bingo — 5 de septiembre 2026',
     icon: Layers,
-    detail: 'Para el próximo evento en vivo del club, canjeable en caja.',
+    detail: 'Cartón para participar en el Gran Bingo de Casino Ventura Plaza.',
+    destacado: {
+      titulo: '¡Se juega una moto 0 km!',
+      texto:
+        '¡Una Yamaha Crypton FINN 115 modelo 2027, 0 km, busca dueño! Participa en nuestro bingo y asegura tu oportunidad de ganarla. Cada cartón te acerca a estrenar. ¡No te quedes sin el tuyo!',
+    },
+    notas: [
+      '5 de septiembre de 2026, 5:00 p. m. (hora de Colombia)',
+      'Bingo cantado por Iván Lalinde',
+      'Válido únicamente en Casino Ventura Plaza',
+      'Si no puedes asistir, el bono sigue vigente y lo redimes en caja hasta su vencimiento',
+    ],
     monetary: false,
     weight: 8,
   },
