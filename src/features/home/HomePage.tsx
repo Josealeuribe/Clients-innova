@@ -26,8 +26,6 @@ import imagenCucuta2 from '@/shared/assets/images/imagen-casino-cucuta-2.jpg'
 import imagenCucuta5  from '@/shared/assets/images/imagen-casino-cucuta-5.jpg'
 import imagenCucuta6 from '@/shared/assets/images/gran-casino-cucuta-6.jpg'
 import imagenCucuta3 from '@/shared/assets/images/imagen-casino-cucuta-3.jpg'
-import BingoPromoBanner from '@/shared/components/BingoPromoBanner'
-import { usePromoBingo } from '@/shared/hooks/usePromoBingo'
 
 const VENUE_VIDEOS = [
   { title: 'Gran Casino Cúcuta No. 2 · Ventura Plaza', src: venturaVideo },
@@ -104,12 +102,6 @@ function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) 
 }
 
 export default function HomePage({ navigate }: Props) {
-  // Campaña del bingo. Va arriba de todo el contenido permanente: es un evento
-  // con fecha próxima, así que su jerarquía tiene que estar por encima de los
-  // mensajes informativos de siempre. Si la campaña está apagada el hook
-  // devuelve null y el bloque no se renderiza.
-  const { promo: promoBingo } = usePromoBingo()
-
   return (
     <div className="min-h-screen flex flex-col bg-transparent">
       <div className="flex-1 pt-28 md:pt-32">
@@ -137,27 +129,6 @@ export default function HomePage({ navigate }: Props) {
             </p>
           </div>
         </div>
-
-        {/* Adelanto del Bingo, arriba y sin hacer scroll: el evento es próximo y
-            tiene que verse sin entrar a ningún otro módulo.
-
-            Va en variante compacta a propósito. La ficha completa (con la foto
-            del premio y el enlace al reel) vive en el widget de Eventos más
-            abajo, y repetir la misma tarjeta grande dos veces en la misma
-            página se lee como un error, no como énfasis. Este adelanto lleva
-            allá. */}
-        {promoBingo && (
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-            <button
-              type="button"
-              onClick={() => document.getElementById('eventos')?.scrollIntoView({ behavior: 'smooth' })}
-              className="block w-full text-left transition-all hover:scale-[1.01]"
-              aria-label="Ver los detalles del Gran Bingo Ventura Plaza"
-            >
-              <BingoPromoBanner promo={promoBingo} variante="compacto" />
-            </button>
-          </div>
-        )}
 
         <MarqueeBanner />
 
@@ -341,37 +312,19 @@ export default function HomePage({ navigate }: Props) {
         <div id="eventos" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <SectionHeading eyebrow="AGENDA" title="Eventos Próximos" />
 
-          {/* Con la campaña activa, la agenda tiene un evento real: se muestra
-              la ficha completa con el premio, los datos y el enlace al reel. El
-              "¡Próximamente!" queda debajo y en pequeño, porque sigue siendo
-              cierto (hay más eventos en preparación) pero ya no es la noticia.
-
-              Al apagarse la campaña, `promoBingo` es null y esta sección vuelve
-              sola al placeholder de antes. */}
-          {promoBingo ? (
-            <>
-              <BingoPromoBanner
-                promo={promoBingo}
-                mostrarInstagram
-                className="max-w-3xl mx-auto"
-              />
-              <p className="mt-6 text-center text-sm text-[#6B5D3F]">
-                Seguimos preparando más eventos y noches especiales en nuestras sedes.
-              </p>
-            </>
-          ) : (
-            <div
-              className="max-w-xl mx-auto rounded-2xl p-10 border border-[#D4AF37]/15 text-center"
-              style={{ background: 'linear-gradient(145deg, #1C1810, #121009)' }}
-            >
-              <PartyPopper size={44} className="text-[#D4AF37] mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-[#F5E6C8] mb-2">¡Próximamente!</h3>
-              <p className="text-sm text-[#9A7B50] leading-relaxed">
-                Estamos preparando nuevos eventos y noches especiales en nuestras sedes. Muy pronto encontrarás aquí
-                toda la agenda con fechas y detalles.
-              </p>
-            </div>
-          )}
+          {/* La agenda no tiene ningún evento con fecha confirmada. Cuando
+              vuelva a haber uno, este placeholder es lo que se reemplaza. */}
+          <div
+            className="max-w-xl mx-auto rounded-2xl p-10 border border-[#D4AF37]/15 text-center"
+            style={{ background: 'linear-gradient(145deg, #1C1810, #121009)' }}
+          >
+            <PartyPopper size={44} className="text-[#D4AF37] mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-[#F5E6C8] mb-2">¡Próximamente!</h3>
+            <p className="text-sm text-[#9A7B50] leading-relaxed">
+              Estamos preparando nuevos eventos y noches especiales en nuestras sedes. Muy pronto encontrarás aquí
+              toda la agenda con fechas y detalles.
+            </p>
+          </div>
         </div>
       </div>
 

@@ -11,10 +11,7 @@ import { PRIZES } from '@/shared/data/prizes'
 import { spinRoulette, fetchGirosRestantes, ApiError } from '@/shared/api/client'
 import { createRouletteSound } from '@/shared/audio/rouletteSound'
 import { useVigencias } from '@/shared/hooks/useVigencias'
-import { usePromoBingo } from '@/shared/hooks/usePromoBingo'
 import { useBloquearScroll } from '@/shared/hooks/useBloquearScroll'
-import BingoPromoBanner from '@/shared/components/BingoPromoBanner'
-import BonoBingoAviso from '@/shared/components/BonoBingoAviso'
 import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
 import { formatVigencia } from '@/shared/utils/vigencia'
 
@@ -116,20 +113,6 @@ function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose }: PrizeModa
           {prize.prize}
         </h2>
         <p className="text-[#9A7B50] text-sm mb-2">{prize.detail}</p>
-
-        {/* El destacado del premio (hoy: la moto del bingo). El detalle del
-            cartón se acortó para que la ficha del catálogo no fuera un muro de
-            texto, así que la moto se muestra aquí como bloque propio — es lo
-            más emocionante que se le puede decir a quien acaba de ganarlo. */}
-        {prize.destacado && (
-          <div
-            className="mt-3 mb-1 rounded-xl border border-[#D4AF37]/35 p-3"
-            style={{ background: 'rgba(212,175,55,0.10)' }}
-          >
-            <p className="text-sm font-black text-[#D4AF37]">{prize.destacado.titulo}</p>
-            <p className="mt-1.5 text-xs leading-relaxed text-[#C4A97A]">{prize.destacado.texto}</p>
-          </div>
-        )}
 
         <div className="my-5 mx-auto w-3/4 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
 
@@ -297,11 +280,6 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   // hasta ahora la única forma de conocerla era ganar un bono y entrar a su
   // cuenta.
   const { datos: vigencias, error: vigenciasError } = useVigencias()
-
-  // Campaña del bingo. El bloque va DEBAJO de la rueda y del botón de girar, no
-  // encima: la ruleta es la funcionalidad de esta pantalla y nada debe taparla
-  // ni robarle el clic.
-  const { promo: promoBingo } = usePromoBingo()
 
   // La ruleta es SOLO para visitantes sin cuenta: es una promocion de
   // captacion. Cualquier cliente con la sesion abierta queda bloqueado, tenga
@@ -494,19 +472,6 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         <div className="mt-3 flex justify-center">
           <VigenciaResumen datos={vigencias} error={vigenciasError} variante="chip" />
         </div>
-
-        {/* Justo debajo, el del cartón de bingo: mismo formato, porque son dos
-            condiciones del mismo premio. Este abre el detalle de las dos vías
-            (jugar el 5 de septiembre o dejarlo en espera hasta su vigencia),
-            que no caben en una línea. */}
-        <div className="mt-2 flex justify-center">
-          <BonoBingoAviso
-            promo={promoBingo}
-            vigenciaHasta={
-              vigencias?.vigencias.find((v) => v.clave === 'carton-bingo')?.vigenciaHasta ?? null
-            }
-          />
-        </div>
       </div>
 
       {/* La ruleta ya no usa SVG ni rotateX. La profundidad proviene de geometría real. */}
@@ -574,14 +539,6 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
           descripcion="Cada premio tiene su propia fecha límite. Estas son las condiciones vigentes de la promoción."
         />
       </div>
-
-      {/* Promoción del bingo, al final del flujo. Queda por debajo de la
-          ruleta a propósito: aquí el protagonista es girar. */}
-      {promoBingo && (
-        <div className="mt-10 w-full max-w-3xl z-10 relative">
-          <BingoPromoBanner promo={promoBingo} />
-        </div>
-      )}
 
       <div className="w-full -mx-4 sm:-mx-6 mt-auto pt-20">
         <Footer navigate={navigate} />

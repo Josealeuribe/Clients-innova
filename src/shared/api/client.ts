@@ -15,8 +15,6 @@ import type {
   ResetPasswordResponse,
   VigenciasResponse,
   CambioVigenciaRow,
-  PromoBingo,
-  PromoBingoEstado,
 } from './types'
 
 export class ApiError extends Error {}
@@ -144,23 +142,6 @@ export function fetchHistorialVigencias(token: string) {
   return request<{ cambios: CambioVigenciaRow[] }>('/promocion/historial', {
     headers: authHeaders(token),
   })
-}
-
-// Campaña especial del Bingo de Ventura Plaza. Público: alimenta el bloque
-// promocional de la portada, de la ruleta y del panel del cliente, y es la
-// MISMA llamada para los tres — la fecha y la hora del evento no pueden decir
-// cosas distintas según la pantalla.
-//
-// El servidor decide `activa` con su reloj y la apaga sola al pasar la hora del
-// evento, así que el bloque desaparece de las tres vistas sin desplegar nada.
-export function fetchPromoBingo() {
-  return request<PromoBingo>('/promocion/bingo')
-}
-
-// Estado del contador de la campaña. Solo personal: al jugador no se le dice
-// cuántos giros faltan para el próximo cartón.
-export function fetchPromoBingoEstado(token: string) {
-  return request<PromoBingoEstado>('/promocion/bingo/estado', { headers: authHeaders(token) })
 }
 
 // Departamentos y municipios: los sirve el backend desde la tabla contra la

@@ -23,16 +23,10 @@ export default function PrizesPage({ navigate }: Props) {
         </p>
 
         {/* LA FICHA DE CADA PREMIO, EN BLOQUES
-            Antes era icono + título + todo el detalle en un párrafo corrido. En
-            los premios cortos se leía bien, pero el cartón de bingo acumula seis
-            hechos distintos (qué es, dónde, qué día, a qué hora, quién canta,
-            dónde se redime) y quedaba como un muro de texto donde había que
-            leerlo entero para encontrar la hora.
-
-            Ahora cada cosa tiene su sitio: cabecera con el tipo, la descripción,
-            el destacado si lo hay, y los datos sueltos en lista. Los premios que
-            no traen destacado ni notas se ven igual que antes, solo con más
-            aire. */}
+            Cabecera con el ícono y el tipo (un bono es dinero de juego y una
+            cortesía no), el nombre del premio y su descripción. El tipo importa
+            lo suficiente para tener su propio sitio y no ir escondido en el
+            texto. */}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {PRIZES.map((prize) => (
             <div
@@ -57,32 +51,6 @@ export default function PrizesPage({ navigate }: Props) {
 
               <h3 className="mb-2 text-lg font-bold leading-tight text-[#F5E6C8]">{prize.prize}</h3>
               <p className="text-sm leading-relaxed text-[#9A7B50]">{prize.detail}</p>
-
-              {prize.destacado && (
-                <div
-                  className="mt-4 rounded-xl border border-[#D4AF37]/35 p-3.5"
-                  style={{ background: 'rgba(212,175,55,0.10)' }}
-                >
-                  <p className="text-sm font-black text-[#D4AF37]">{prize.destacado.titulo}</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#C4A97A]">
-                    {prize.destacado.texto}
-                  </p>
-                </div>
-              )}
-
-              {prize.notas && prize.notas.length > 0 && (
-                <ul className="mt-4 flex flex-col gap-2 border-t border-[#D4AF37]/12 pt-4">
-                  {prize.notas.map((nota) => (
-                    <li key={nota} className="flex gap-2 text-xs leading-relaxed text-[#9A7B50]">
-                      {/* El punto va como elemento aparte y no como `list-disc`
-                          para que el texto de varias líneas quede alineado bajo
-                          sí mismo y no debajo del punto. */}
-                      <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-[#D4AF37]" />
-                      <span>{nota}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
           ))}
         </div>

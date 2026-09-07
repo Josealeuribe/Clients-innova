@@ -50,9 +50,9 @@ export default function OverviewSection({ clientes }: Props) {
       </div>
 
       {/* REPARTO ENTRE CASINOS — solo premios generales.
-          Los cartones de la campaña de bingo se cuentan aparte: son de una sola
-          sede y mezclarlos haría ver a Ventura Plaza como desbalanceada cuando
-          no lo está. */}
+          Los cartones que entregó la campaña de bingo (ya cerrada) se cuentan
+          aparte: fueron de una sola sede y mezclarlos haría ver a Ventura Plaza
+          como desbalanceada cuando no lo está. */}
       <div className="rounded-2xl border border-[#D4AF37]/12 p-5 mb-6" style={{ background: '#121009' }}>
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
@@ -65,7 +65,7 @@ export default function OverviewSection({ clientes }: Props) {
           </div>
           {stats.totalPromocionales > 0 && (
             <div className="rounded-xl border border-[#6A00B8]/30 px-3 py-2" style={{ background: 'rgba(106,0,184,0.10)' }}>
-              <p className="text-[10px] text-[#C77DFF] font-bold tracking-wider">CAMPAÑA BINGO (APARTE)</p>
+              <p className="text-[10px] text-[#C77DFF] font-bold tracking-wider">BONOS PROMOCIONALES (APARTE)</p>
               <p className="text-sm text-[#F5E6C8] font-bold mt-0.5">
                 {stats.totalPromocionales} cartón{stats.totalPromocionales === 1 ? '' : 'es'}
                 <span className="text-xs font-normal text-[#9A7B50]">

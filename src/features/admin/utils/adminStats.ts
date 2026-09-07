@@ -17,11 +17,12 @@ export function buildAdminStats(clientes: AdminClienteRow[] | null) {
   // DOS ESTADÍSTICAS SEPARADAS, A PROPÓSITO
   //
   // Los premios GENERALES son los que el sistema reparte equilibrando las 3
-  // sedes. Los PROMOCIONALES son una campaña extraordinaria de una sola sede
-  // (hoy el bingo de Ventura Plaza).
+  // sedes. Los PROMOCIONALES salieron de la campaña del bingo de Ventura
+  // Plaza, que ya cerró: fue una entrega extraordinaria de una sola sede y sus
+  // bonos siguen en la base.
   //
   // Mezclarlos rompe las dos lecturas: Ventura Plaza aparecería como la sede
-  // con más premios solo por la campaña, y quien mire el panel concluiría que
+  // con más premios solo por esa campaña, y quien mire el panel concluiría que
   // el reparto sigue desbalanceado cuando no lo está. Por eso el reparto por
   // sede se mide ÚNICAMENTE sobre los generales — igual que lo hace el sorteo
   // en el servidor (ver server/src/utils/sorteoPremios.ts).

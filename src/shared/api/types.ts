@@ -42,7 +42,8 @@ export interface BonoInfo {
   vigenciaHasta: string
   /**
    * Campaña de la que salió este bono, o null si vino del reparto permanente.
-   * Hoy solo la usa el bingo de Ventura Plaza.
+   * Hoy todos vienen del reparto permanente; lo traen lleno los bonos de la
+   * campaña del bingo, que ya está cerrada y sigue en la base.
    */
   promocion?: string | null
   /** Fecha y hora del evento al que da acceso, cuando aplica (ISO). */
@@ -54,55 +55,6 @@ export interface BonoInfo {
   /** Quién lo entregó. Va en el comprobante del cliente. */
   canjeadoPor: string | null
   premio: PremioInfo
-}
-
-// --- Campaña especial de Bingo (Ventura Plaza) ---
-//
-// Los parámetros viven en el servidor (src/config/promoBingo.ts) y viajan por
-// API para que la portada, la ruleta y el panel del cliente digan exactamente
-// lo mismo. `activa` la decide el servidor con SU reloj y se apaga sola al
-// pasar la hora del evento, así que el bloque desaparece de las tres vistas sin
-// desplegar nada.
-export interface PromoBingo {
-  activa: boolean
-  /** Clave de la sede dueña de la campaña. */
-  casino: string
-  /** Fecha y hora del bingo (ISO). Se formatea siempre en America/Bogota. */
-  eventoEn: string
-  /** Quién canta el bingo. Es el gancho del evento. */
-  presentador: string
-  /** Reel del evento. El botón del widget de Eventos lleva aquí. */
-  instagramUrl?: string
-  /**
-   * El premio mayor que se juega EN el bingo: la moto.
-   *
-   * No es el premio de la ruleta. La ruleta entrega el CARTÓN, y el cartón es
-   * la entrada para jugarse la moto el 5 de septiembre. Mezclarlos prometería
-   * una moto a todo el que gire.
-   */
-  premioEvento?: {
-    nombre: string
-    /** Titular corto, para chips y espacios estrechos. */
-    gancho: string
-    descripcion: string
-  }
-  identificador: string
-  sede: Sede | null
-  premio: { clave: string; nombre: string; detalle: string } | null
-  /** Hora del servidor: la cuenta regresiva no depende del reloj local. */
-  consultadoEn: string
-}
-
-// Estado de la campaña para el personal. El contador NO sale en el endpoint
-// público: decirle al jugador "vas 4 de 5" cambiaría cuándo decide girar.
-export interface PromoBingoEstado extends Omit<PromoBingo, 'sede' | 'premio' | 'consultadoEn'> {
-  registrosPorGanador: number
-  girosContados: number
-  ganadoresSorteados: number
-  faltanParaElProximo: number
-  /** Cartones que un cliente llegó a reclamar completando su registro. */
-  bonosEntregados: number
-  bonosCanjeados: number
 }
 
 // --- Vigencia de la promoción ---
@@ -245,8 +197,8 @@ export interface AdminClienteBono {
   /**
    * Campaña del bono, o null si salió del reparto permanente. Es lo que separa
    * las dos estadísticas del panel: los premios generales, que se equilibran
-   * entre las 3 sedes, y los promocionales del bingo, que son de una sola sede
-   * y no deben contarse al medir ese equilibrio.
+   * entre las 3 sedes, y los que entregó la campaña del bingo (ya cerrada), que
+   * fueron de una sola sede y no deben contarse al medir ese equilibrio.
    */
   promocion?: string | null
   premio: { nombre: string; monetario: boolean }
