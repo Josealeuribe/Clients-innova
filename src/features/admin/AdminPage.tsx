@@ -15,6 +15,7 @@ import { useAdminClientes } from './hooks/useAdminClientes'
 import { useAdminCanjes } from './hooks/useAdminCanjes'
 import { useAdminUsuarios } from './hooks/useAdminUsuarios'
 import OverviewSection from './sections/OverviewSection'
+import DashboardSection from './sections/DashboardSection'
 import ClientesSection from './sections/ClientesSection'
 import CanjesSection from './sections/CanjesSection'
 import CampanasSection from './sections/CampanasSection'
@@ -61,6 +62,7 @@ export default function AdminPage({ navigate }: Props) {
         )}
 
       {section === 'overview' && clientes && <OverviewSection clientes={clientes} />}
+      {section === 'dashboard' && clientes && <DashboardSection clientes={clientes} />}
       {section === 'clientes' && clientes && <ClientesSection clientes={clientes} />}
       {section === 'canjes' && <CanjesSection canjes={canjes} error={canjesError} />}
       {section === 'vigencias' && <VigenciasStaffSection />}

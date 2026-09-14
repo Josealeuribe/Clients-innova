@@ -1,9 +1,12 @@
-import { CircleCheck, Clock, Gift, Users } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { CircleCheck, Clock, Gift, Users, Wallet } from 'lucide-react'
 import type { AdminClienteRow } from '@/shared/api/types'
 import { useVigencias } from '@/shared/hooks/useVigencias'
 import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
+import DineroCasinosModal from '../components/DineroCasinosModal'
 import { buildAdminStats } from '../utils/adminStats'
-import { formatDate } from '../utils/adminFormatters'
+import { buildDineroPorCasino } from '../utils/dineroPorCasino'
+import { formatCOPCorto, formatDate } from '../utils/adminFormatters'
 
 interface Props {
   clientes: AdminClienteRow[]
@@ -14,16 +17,37 @@ export default function OverviewSection({ clientes }: Props) {
   // sección: "Bonos pendientes: 22" cambia de significado por completo según si
   // el plazo para redimirlos vence mañana o el mes entrante.
   const { datos: vigencias, error: vigenciasError } = useVigencias()
+  const [modalDinero, setModalDinero] = useState(false)
+  // Solo la cifra del boton. El desglose por casino lo calcula el propio modal
+  // cuando se abre, que es cuando hace falta.
+  const dinero = useMemo(() => buildDineroPorCasino(clientes), [clientes])
   const stats = buildAdminStats(clientes)
   if (!stats) return null
 
   return (
     <div style={{ animation: 'slide-up 0.4s ease-out forwards' }}>
-      <div className="mb-6">
-        <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Vista General
-        </h2>
-        <p className="text-sm text-[#9A7B50] mt-1">Estado real de la promoción "Gira y Gana"</p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-black text-[#F5E6C8]" style={{ fontFamily: "'Inter', sans-serif" }}>
+            Vista General
+          </h2>
+          <p className="text-sm text-[#9A7B50] mt-1">Estado real de la promoción "Gira y Gana"</p>
+        </div>
+
+        {/* El dinero entregado se consulta desde la primera pantalla, sin tener
+            que cambiar de sección: es una pregunta puntual y el modal la
+            responde encima de lo que ya se está mirando. */}
+        {dinero && (
+          <button
+            type="button"
+            onClick={() => setModalDinero(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-[#D4AF37]/30 px-4 py-2.5 text-sm text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37]/60 transition-all"
+          >
+            <Wallet size={15} className="flex-shrink-0" />
+            <span className="font-semibold tabular-nums">{formatCOPCorto(dinero.totales.entregado)}</span>
+            <span className="text-[#9A7B50] hidden sm:inline">entregados · ver por casino</span>
+          </button>
+        )}
       </div>
 
       <VigenciaResumen datos={vigencias} error={vigenciasError} className="mb-6" />
@@ -162,6 +186,8 @@ export default function OverviewSection({ clientes }: Props) {
           descripcion="Hasta cuándo se redime cada uno. El historial de cambios está en la sección Vigencias."
         />
       </div>
+
+      {modalDinero && <DineroCasinosModal clientes={clientes} onCerrar={() => setModalDinero(false)} />}
     </div>
   )
 }

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Download, Search } from 'lucide-react'
 import type { AdminClienteRow } from '@/shared/api/types'
 import Paginacion from '@/shared/components/Paginacion'
 import TablaResponsiva, { type ColumnaTabla } from '@/shared/components/TablaResponsiva'
 import { usePaginacion } from '@/shared/hooks/usePaginacion'
 import StatusBadge from '../components/StatusBadge'
 import { formatDate } from '../utils/adminFormatters'
+import { exportarClientesAExcel } from '../utils/clientesExcel'
 
 interface Props {
   clientes: AdminClienteRow[]
@@ -70,6 +71,7 @@ const COLUMNAS: ColumnaTabla<AdminClienteRow>[] = [
 
 export default function ClientesSection({ clientes }: Props) {
   const [search, setSearch] = useState('')
+  const [exportando, setExportando] = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -87,6 +89,27 @@ export default function ClientesSection({ clientes }: Props) {
     'admin.clientes',
   )
 
+  // Se exporta lo FILTRADO, no siempre la lista completa: si alguien buscó
+  // "Cúcuta" y descarga, espera esos clientes y no los 4.000. Sin búsqueda
+  // activa `filtered` ya es todo, así que el caso normal sigue siendo "todos".
+  const buscando = search.trim().length > 0
+
+  function exportar() {
+    if (!filtered.length || exportando) return
+
+    setExportando(true)
+    // El armado del archivo es sincrónico y con miles de filas bloquea el hilo
+    // un momento. El respiro deja que el botón se pinte en "Generando..." antes
+    // de congelarse; si no, no se ve nada y se vuelve a hacer clic.
+    setTimeout(() => {
+      try {
+        exportarClientesAExcel(filtered)
+      } finally {
+        setExportando(false)
+      }
+    }, 50)
+  }
+
   return (
     <div style={{ animation: 'slide-up 0.4s ease-out forwards' }}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -97,22 +120,42 @@ export default function ClientesSection({ clientes }: Props) {
           <p className="text-sm text-[#9A7B50] mt-1">{clientes.length} clientes en total</p>
         </div>
 
-        <div className="relative w-full sm:w-72">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B5D3F]" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, documento o correo..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              // Buscar SI vuelve a la pagina 1: los resultados son otra lista y
-              // seguir en la pagina 7 de la anterior no significa nada. Es la
-              // unica vuelta a la primera pagina del sistema — recargar o
-              // ejecutar una accion respetan donde estabas.
-              setPagina(1)
-            }}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-[#F5E6C8] bg-[#121009] border border-[#D4AF37]/20 outline-none placeholder:text-[#4A3D28] focus:border-[#D4AF37]/60"
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-72">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B5D3F]" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, documento o correo..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                // Buscar SI vuelve a la pagina 1: los resultados son otra lista y
+                // seguir en la pagina 7 de la anterior no significa nada. Es la
+                // unica vuelta a la primera pagina del sistema — recargar o
+                // ejecutar una accion respetan donde estabas.
+                setPagina(1)
+              }}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-[#F5E6C8] bg-[#121009] border border-[#D4AF37]/20 outline-none placeholder:text-[#4A3D28] focus:border-[#D4AF37]/60"
+            />
+          </div>
+
+          {/* Baja lo que se esté viendo: sin búsqueda es la lista completa. */}
+          <button
+            type="button"
+            onClick={exportar}
+            disabled={!filtered.length || exportando}
+            title={
+              filtered.length
+                ? `Descarga un Excel con ${filtered.length} ${filtered.length === 1 ? 'cliente' : 'clientes'}${buscando ? ' (los de la búsqueda actual)' : ''} y todos sus datos.`
+                : 'No hay clientes para exportar.'
+            }
+            className="flex-shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#C4A97A] border border-[#D4AF37]/25 hover:border-[#D4AF37]/55 hover:text-[#D4AF37] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-[#D4AF37]/25 disabled:hover:text-[#C4A97A]"
+          >
+            <Download size={15} />
+            <span>
+              {exportando ? 'Generando...' : buscando ? `Exportar ${filtered.length}` : 'Exportar a Excel'}
+            </span>
+          </button>
         </div>
       </div>
 

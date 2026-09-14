@@ -201,6 +201,15 @@ export interface AdminClienteBono {
    * fueron de una sola sede y no deben contarse al medir ese equilibrio.
    */
   promocion?: string | null
+  /**
+   * Clave estable del premio (bono-5000, carton-bingo...). Es con lo que el
+   * panel valoriza el bono en pesos: ver features/admin/utils/valorPremios.ts.
+   *
+   * Opcional a proposito. El front y la API son dos servicios de Render que se
+   * despliegan por separado; si esta vista sale antes que la API que la manda,
+   * la valoracion cae a un respaldo por nombre en vez de dar todo en cero.
+   */
+  premioClave?: string | null
   premio: { nombre: string; monetario: boolean }
 }
 

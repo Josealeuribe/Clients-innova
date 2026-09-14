@@ -1,5 +1,6 @@
 export type AdminSection =
   | 'overview'
+  | 'dashboard'
   | 'clientes'
   | 'canjes'
   | 'vigencias'

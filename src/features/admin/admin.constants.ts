@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   CalendarClock,
   ClipboardList,
   LayoutDashboard,
@@ -11,6 +12,10 @@ import type { AdminSection, CampanaAudiencia } from './admin.types'
 
 export const NAV_ITEMS = [
   { id: 'overview' as AdminSection, label: 'Vista General', icon: LayoutDashboard },
+  // Va pegado a Vista General y no al final: son las dos pantallas de lectura
+  // del panel y se consultan una detras de la otra. Vista General dice como va
+  // la promocion hoy; el Dashboard, el reparto entre casinos y el ritmo.
+  { id: 'dashboard' as AdminSection, label: 'Dashboard', icon: BarChart3 },
   { id: 'clientes' as AdminSection, label: 'Clientes', icon: Users },
   { id: 'canjes' as AdminSection, label: 'Auditoría de Canjes', icon: ClipboardList },
   // Hasta cuándo se redime cada premio, y el registro de cada vez que esa fecha
