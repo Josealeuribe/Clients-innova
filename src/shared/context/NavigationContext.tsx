@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { PAGE_TITLES, ROUTES, pageFromPath, type Page } from '@/shared/types/navigation'
+import { PAGE_TITLES, pageFromPath, pathFor, type Page } from '@/shared/types/navigation'
 
 const HOME_PAGE: Page = 'home'
 
@@ -39,7 +39,7 @@ export function NavigationProvider({ fallbackPage = 'landing', children }: { fal
   // reemplaza por la de la vista que realmente se está mostrando.
   useEffect(() => {
     if (pageFromPath(window.location.pathname) === null) {
-      window.history.replaceState({ page: fallbackPage }, '', ROUTES[fallbackPage])
+      window.history.replaceState({ page: fallbackPage }, '', pathFor(fallbackPage))
     }
     aplicarTitulo(page)
     // Solo al montar: los cambios posteriores los maneja navigate/popstate.
@@ -64,7 +64,7 @@ export function NavigationProvider({ fallbackPage = 'landing', children }: { fal
 
   const navigate = useCallback((newPage: Page) => {
     if (newPage === page) return
-    window.history.pushState({ page: newPage }, '', ROUTES[newPage])
+    window.history.pushState({ page: newPage }, '', pathFor(newPage))
     aplicarTitulo(newPage)
     window.scrollTo(0, 0)
     setPreviousPage(page)
@@ -73,7 +73,7 @@ export function NavigationProvider({ fallbackPage = 'landing', children }: { fal
 
   const goHome = useCallback(() => navigate(HOME_PAGE), [navigate])
 
-  const hrefFor = useCallback((destino: Page) => ROUTES[destino], [])
+  const hrefFor = useCallback((destino: Page) => pathFor(destino), [])
 
   return (
     <NavigationContext.Provider value={{ page, previousPage, navigate, goHome, homePage: HOME_PAGE, hrefFor }}>

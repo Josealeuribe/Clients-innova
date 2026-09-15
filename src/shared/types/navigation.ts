@@ -69,6 +69,15 @@ const PAGE_BY_PATH = new Map<string, Page>(
   (Object.entries(ROUTES) as [Page, string][]).map(([page, path]) => [path, page]),
 )
 
+// Subpath donde vive esta app dentro de innovaclub.com.co (p.ej. '/cucuta'),
+// tomado de BASE_URL -- variable propia de Vite que ya refleja el `base`
+// fijado en vite.config.ts (via FIGMA_PUBLIC_URL al construir). Se deriva de
+// ahi en vez de hardcodear el string para que quede siempre en sincronia con
+// el build, sin una segunda fuente de verdad que se pueda desincronizar.
+// Vacio cuando la app vive en la raiz de su propio dominio (build sin
+// FIGMA_PUBLIC_URL, p.ej. local o un despliegue standalone).
+const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 // Normaliza la barra final para que /ruleta y /ruleta/ sean la misma vista.
 function normalizarPath(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith('/')) return pathname.replace(/\/+$/, '')
@@ -77,6 +86,19 @@ function normalizarPath(pathname: string): string {
 
 // Devuelve null si la URL no corresponde a ningun modulo, para que quien
 // llame decida (hoy: mandar a la landing y corregir la barra de direcciones).
+//
+// Recorta BASE_PATH antes de buscar: window.location.pathname trae el
+// prefijo completo (p.ej. '/cucuta/ruleta'), pero ROUTES esta escrito sin el
+// (solo '/ruleta') porque es el mismo mapa que usa la app standalone.
 export function pageFromPath(pathname: string): Page | null {
-  return PAGE_BY_PATH.get(normalizarPath(pathname)) ?? null
+  const sinPrefijo = BASE_PATH && pathname.startsWith(BASE_PATH)
+    ? pathname.slice(BASE_PATH.length) || '/'
+    : pathname
+  return PAGE_BY_PATH.get(normalizarPath(sinPrefijo)) ?? null
+}
+
+// Ruta PUBLICA de una vista, con el prefijo puesto -- para pushState/
+// replaceState y para href reales que funcionen tal cual bajo el subpath.
+export function pathFor(page: Page): string {
+  return BASE_PATH + ROUTES[page]
 }
