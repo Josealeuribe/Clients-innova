@@ -16,6 +16,7 @@ import CajeroPage from '@/features/cajero/CajeroPage'
 import Navbar from '@/shared/components/Navbar'
 import { NavigationProvider, useNavigation } from '@/shared/context/NavigationContext'
 import { RegistrationDraftProvider } from '@/shared/context/RegistrationDraftContext'
+import { PremioPendienteProvider } from '@/shared/context/PremioPendienteContext'
 import bgImg from '@/shared/assets/images/image-copy.png'
 
 import type { Page, AppState } from '@/shared/types/navigation'
@@ -90,12 +91,15 @@ function AppShell() {
 
 export default function App() {
   return (
-    // El borrador del registro va POR ENCIMA de AppShell: es justamente el
-    // cambio de vista lo que desmonta RegistrationPage, así que el provider
-    // tiene que sobrevivirlo para conservar el formulario.
+    // El borrador del registro y el premio pendiente van POR ENCIMA de
+    // AppShell: es justamente el cambio de vista lo que desmonta
+    // RegistrationPage y RoulettePage, así que los providers tienen que
+    // sobrevivirlo para conservar el formulario y el premio recién ganado.
     <NavigationProvider fallbackPage="landing">
       <RegistrationDraftProvider>
-        <AppShell />
+        <PremioPendienteProvider>
+          <AppShell />
+        </PremioPendienteProvider>
       </RegistrationDraftProvider>
     </NavigationProvider>
   )

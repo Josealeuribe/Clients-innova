@@ -148,6 +148,7 @@ export default function HomePage({ navigate }: Props) {
                 className="group relative h-24 sm:h-28 rounded-2xl overflow-hidden border border-[#D4AF37]/15 hover:border-[#D4AF37]/50 transition-all"
               >
                 <img
+                  decoding="async"
                   src={card.image}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover scale-110 blur-md transition-transform duration-300 group-hover:scale-125"
@@ -212,6 +213,8 @@ export default function HomePage({ navigate }: Props) {
                 style={{ background: '#121009' }}
               >
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={VENUE_PHOTOS[index % VENUE_PHOTOS.length]}
                   alt={venue.name}
                   className="h-36 w-full object-cover"
@@ -296,6 +299,8 @@ export default function HomePage({ navigate }: Props) {
                 className={`group relative aspect-square rounded-2xl overflow-hidden border border-[#D4AF37]/15 ${game.page ? 'cursor-pointer hover:border-[#D4AF37]/50 transition-all' : ''}`}
               >
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={game.image}
                   alt={game.title}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"

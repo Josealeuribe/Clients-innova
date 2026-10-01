@@ -14,6 +14,7 @@ import { useVigencias } from '@/shared/hooks/useVigencias'
 import { useBloquearScroll } from '@/shared/hooks/useBloquearScroll'
 import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
 import { formatVigencia } from '@/shared/utils/vigencia'
+import { usePremioPendiente } from '@/shared/context/PremioPendienteContext'
 
 interface Props {
   navigate: (page: Page) => void
@@ -63,9 +64,11 @@ interface PrizeModalProps {
   vigenciaHasta: string | null
   onClaim: () => void
   onClose: () => void
+  /** Sale a la vista de términos conservando el premio, para poder volver. */
+  onVerCondiciones: () => void
 }
 
-function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose }: PrizeModalProps) {
+function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose, onVerCondiciones }: PrizeModalProps) {
   const prize = PRIZES[segmentIndex]
   const { monetary } = prize
 
@@ -157,9 +160,14 @@ function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose }: PrizeModa
           Reclamar mi Premio
         </button>
 
+        {/* Antes esto llamaba a onClose, es decir, solo cerraba el modal: el
+            botón decía "Ver condiciones" y no llevaba a ninguna parte. Ahora
+            abre los términos de verdad, conservando el premio para poder
+            volver a este mismo modal y reclamarlo (ver
+            PremioPendienteContext). */}
         <button
           type="button"
-          onClick={onClose}
+          onClick={onVerCondiciones}
           className="w-full py-2.5 rounded-xl text-sm text-[#9A7B50] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 hover:text-[#C4A97A] transition-all"
         >
           Ver condiciones
@@ -264,11 +272,18 @@ function YaParticipasteModal({ tieneBono, bonoCanjeado, codigo, onClose, onVerCu
 const DURACION_GIRO_MS = 5800
 
 export default function RoulettePage({ navigate, onPrizeWon }: Props) {
+  // Premio ganado y aún sin reclamar. Vive por encima de esta vista para que
+  // salir a los términos y volver no lo pierda (ver PremioPendienteContext).
+  const { premioPendiente, recordar, olvidar } = usePremioPendiente()
+
   const [isSpinning, setIsSpinning] = useState(false)
-  const [wonPrizeIdx, setWonPrizeIdx] = useState<number | null>(null)
+  // Los tres arrancan de lo que haya guardado: si el visitante vuelve de leer
+  // las condiciones, la vista se vuelve a montar desde cero y esto es lo que
+  // hace que reaparezca su premio en vez de una ruleta en blanco.
+  const [wonPrizeIdx, setWonPrizeIdx] = useState<number | null>(premioPendiente?.segmentIndex ?? null)
   const [pendingPrizeIdx, setPendingPrizeIdx] = useState<number | null>(null)
-  const [prizeTicket, setPrizeTicket] = useState<string | null>(null)
-  const [showModal, setShowModal] = useState(false)
+  const [prizeTicket, setPrizeTicket] = useState<string | null>(premioPendiente?.ticket ?? null)
+  const [showModal, setShowModal] = useState(premioPendiente !== null)
   const [showConfetti, setShowConfetti] = useState(false)
   const [spinCommand, setSpinCommand] = useState<RouletteSpinCommand | null>(null)
   const [spinError, setSpinError] = useState<string | null>(null)
@@ -384,6 +399,9 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
 
     setIsSpinning(false)
     setWonPrizeIdx(pendingPrizeIdx)
+    // Se guarda ya, no al abrir los términos: a partir de aquí el premio
+    // existe y debe sobrevivir a cualquier cambio de vista.
+    if (prizeTicket) recordar({ segmentIndex: pendingPrizeIdx, ticket: prizeTicket })
     setShowConfetti(true)
     sonido.current.win()
 
@@ -396,8 +414,27 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
       onPrizeWon(PRIZES[wonPrizeIdx].prize, prizeTicket)
     }
 
+    // Ya pasó al registro, que lleva su propia copia del premio y del ticket:
+    // dejarlo aquí haría reaparecer el modal al volver a la ruleta.
+    olvidar()
     setShowModal(false)
     navigate('register')
+  }
+
+  // Cerrar con la X es renunciar al premio en esta vista: se olvida para que no
+  // vuelva a saltar solo. El ticket sigue vivo en el servidor sus 30 minutos,
+  // pero sin el modal ya no hay forma de reclamarlo desde aquí, que es
+  // justamente lo que el visitante pidió al cerrar.
+  const handleCerrarModal = () => {
+    olvidar()
+    setShowModal(false)
+  }
+
+  // Salir a leer las condiciones NO es renunciar: el premio se conserva y el
+  // botón de volver de los términos trae de vuelta a este mismo modal.
+  const handleVerCondiciones = () => {
+    setShowModal(false)
+    navigate('terms')
   }
 
   return (
@@ -427,7 +464,8 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
             vigencias?.vigencias.find((v) => v.clave === PRIZES[wonPrizeIdx]?.clave)?.vigenciaHasta ?? null
           }
           onClaim={handleClaim}
-          onClose={() => setShowModal(false)}
+          onClose={handleCerrarModal}
+          onVerCondiciones={handleVerCondiciones}
         />
       )}
 

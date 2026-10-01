@@ -1,106 +1,84 @@
-import { useEffect } from 'react'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
-import { comoLlegarUrl, VENUES } from '@/shared/data/locations'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
-// Un marcador por sede, no uno por ciudad. Las 3 están en Cúcuta y antes
-// aparecían agrupadas bajo un solo pin, así que el mapa no servía para saber
-// a cuál ir: es justo lo que necesita alguien con un bono asignado a una sede
-// concreta.
-const goldIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #F0C847, #D4AF37, #A0832A);
-    border: 2px solid #0a0805;
-    box-shadow: 0 0 10px rgba(212,175,55,0.8);
-  "></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-  popupAnchor: [0, -9],
-})
-
-// Encuadra el mapa para que las 3 sedes queden visibles. No se usa un zoom
-// fijo porque la distancia entre ellas puede cambiar si mañana abren una
-// sede en otro punto de la ciudad, y un zoom quemado dejaría alguna fuera.
-function EncuadrarSedes({ puntos }: { puntos: [number, number][] }) {
-  const mapa = useMap()
-
-  useEffect(() => {
-    if (puntos.length === 0) return
-    if (puntos.length === 1) {
-      mapa.setView(puntos[0], 15)
-      return
-    }
-    // El padding evita que un marcador quede pegado al borde; maxZoom impide
-    // que, con sedes muy juntas, el mapa se acerque tanto que se pierda la
-    // referencia de la ciudad.
-    mapa.fitBounds(L.latLngBounds(puntos), { padding: [48, 48], maxZoom: 15 })
-  }, [mapa, puntos])
-
-  return null
-}
+// Envoltorio PEREZOSO del mapa de sedes.
+//
+// El mapa vive en el Footer, y el Footer está en casi todas las vistas. Montado
+// de golpe costaba lo mismo en todas: Leaflet y su CSS dentro del bundle
+// principal, más 12 imágenes de tiles pedidas a OpenStreetMap nada más abrir la
+// página — aunque el visitante nunca bajara hasta el pie, que es lo normal.
+//
+// Aquí se corta por los dos lados:
+//
+//   · `lazy()` saca Leaflet del bundle principal y lo deja en un chunk propio,
+//     que solo se descarga cuando hace falta.
+//   · El IntersectionObserver espera a que el hueco del mapa se acerque a la
+//     pantalla (200px antes) para montarlo. Quien no baja, no lo paga.
+//
+// Mientras tanto se pinta un marco del mismo tamaño. Eso importa: sin él, el
+// mapa apareciendo de golpe empujaría el contenido de abajo — el salto de
+// maquetación que justamente se siente como un "flasheo" al hacer scroll.
+const LocationsMapInterno = lazy(() => import('./LocationsMapInterno'))
 
 interface Props {
   height?: number | string
   compact?: boolean
 }
 
+// Mismo borde y radio que el mapa real, para que la sustitución no se note.
+function Marco({ height, children }: { height: number | string; children?: React.ReactNode }) {
+  return (
+    <div
+      className="w-full rounded-2xl overflow-hidden border border-[#D4AF37]/20 flex items-center justify-center"
+      style={{ height, background: 'linear-gradient(160deg, #1C1810, #121009)' }}
+    >
+      {children}
+    </div>
+  )
+}
+
 export default function LocationsMap({ height = 360, compact = false }: Props) {
-  const puntos = VENUES.map((venue) => venue.coords)
+  const hueco = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const nodo = hueco.current
+    if (!nodo || visible) return
+
+    // Sin IntersectionObserver (navegadores muy viejos) se monta y ya: es
+    // preferible cargar de más que quedarse sin mapa.
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true)
+      return
+    }
+
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        if (entradas.some((e) => e.isIntersecting)) {
+          setVisible(true)
+          observador.disconnect()
+        }
+      },
+      // Se adelanta 200px para que el mapa esté puesto cuando el usuario llegue,
+      // en vez de verlo aparecer.
+      { rootMargin: '200px' },
+    )
+    observador.observe(nodo)
+    return () => observador.disconnect()
+  }, [visible])
+
+  if (!visible) {
+    return (
+      <div ref={hueco}>
+        <Marco height={height}>
+          <span className="text-xs text-[#6B5D3F]">Cargando mapa…</span>
+        </Marco>
+      </div>
+    )
+  }
 
   return (
-    <div className="w-full rounded-2xl overflow-hidden border border-[#D4AF37]/20" style={{ height }}>
-      <MapContainer
-        center={puntos[0]}
-        zoom={14}
-        style={{ height: '100%', width: '100%' }}
-        scrollWheelZoom={!compact}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
-        />
-
-        <EncuadrarSedes puntos={puntos} />
-
-        {VENUES.map((venue) => (
-          <Marker key={venue.clave} position={venue.coords} icon={goldIcon}>
-            <Popup>
-              <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 200 }}>
-                <strong style={{ fontSize: 13 }}>{venue.name}</strong>
-                <div style={{ fontSize: 12, color: '#555', marginTop: 2 }}>{venue.address}</div>
-
-                <div style={{ marginTop: 8 }}>
-                  {venue.schedule.map((line) => (
-                    <div key={line.days} style={{ fontSize: 11, color: '#777' }}>
-                      {line.days}: {line.hours}
-                    </div>
-                  ))}
-                </div>
-
-                <a
-                  href={comoLlegarUrl(venue)}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    marginTop: 10,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#8A6000',
-                  }}
-                >
-                  Cómo llegar →
-                </a>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
+    <Suspense fallback={<Marco height={height}><span className="text-xs text-[#6B5D3F]">Cargando mapa…</span></Marco>}>
+      <LocationsMapInterno height={height} compact={compact} />
+    </Suspense>
   )
 }

@@ -101,6 +101,15 @@ export default function TermsPage({ navigate }: Props) {
           ))}
         </div>
 
+        {/* El mismo "volver" repetido al pie. La página son 10 secciones: quien
+            entra desde el modal del premio a comprobar las condiciones termina
+            de leer aquí abajo, y obligarlo a subir hasta el encabezado para
+            poder reclamar es justo la fricción que este botón existe para
+            evitar. */}
+        <div className="mt-10 flex justify-center">
+          <LegalBackButton />
+        </div>
+
         <p className="text-center text-[#3A3020] text-xs mt-10">
           ¿Tienes dudas sobre estos términos?{' '}
           <button onClick={() => navigate('login')} className="text-[#9A7B50] hover:text-[#D4AF37] transition-colors underline">

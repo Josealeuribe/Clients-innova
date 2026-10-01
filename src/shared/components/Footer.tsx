@@ -54,6 +54,8 @@ export default function Footer({ navigate }: Props) {
             "
               >
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={logoImg}
                   alt="Gran Casino Cucuta"
                   className="max-h-12 max-w-[100px] w-auto object-contain"
@@ -75,6 +77,8 @@ export default function Footer({ navigate }: Props) {
             "
               >
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={logoImg2}
                   alt="Gran Casino Cucuta"
                   className="max-h-12 max-w-[100px] w-auto object-contain"
@@ -96,6 +100,8 @@ export default function Footer({ navigate }: Props) {
             "
               >
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={coljuegosImg}
                   alt="Coljuegos"
                   className="max-h-8 max-w-[115px] w-auto object-contain"
@@ -117,6 +123,8 @@ export default function Footer({ navigate }: Props) {
             "
               >
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={vigiladoSupersaludImg}
                   alt="Vigilado Supersalud"
                   className="max-h-8 max-w-[115px] w-auto object-contain"
@@ -259,6 +267,8 @@ export default function Footer({ navigate }: Props) {
             "
             >
               <img
+                loading="lazy"
+                decoding="async"
                 src={edad18Img}
                 alt="Solo para mayores de 18 años"
                 className="max-h-10 max-w-[40px] w-auto object-contain"
@@ -294,6 +304,8 @@ export default function Footer({ navigate }: Props) {
     "
   >
     <img
+      loading="lazy"
+      decoding="async"
       src={juegoResponsable}
       alt="Juego Responsable"
       className="
@@ -332,6 +344,8 @@ export default function Footer({ navigate }: Props) {
     "
   >
     <img
+      loading="lazy"
+      decoding="async"
       src={autorizaColjuegos}
       alt="Autoriza Coljuegos"
       className="
@@ -363,6 +377,8 @@ export default function Footer({ navigate }: Props) {
 
         <div className="mb-10 rounded-xl overflow-hidden bg-white p-2">
           <img
+            loading="lazy"
+            decoding="async"
             src={bandaCondicionesImg}
             alt="Condiciones promocionales y entidades reguladoras"
             className="w-full h-auto block"
