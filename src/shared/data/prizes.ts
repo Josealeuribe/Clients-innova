@@ -93,7 +93,13 @@ export const PRIZES: RoulettePrize[] = [
     icon: Trophy,
     detail: 'Nuestro bono de bienvenida mayor, redimible en sede al completar tu registro.',
     monetary: true,
-    weight: 6,
+    // Espejo de server/prisma/seed.ts, que es donde ESTE numero decide algo.
+    // Aqui no lo lee nadie: el sorteo vive entero en el backend y la ruleta
+    // 3D solo anima. Se mantiene al dia para que las dos listas no se
+    // contradigan al leerlas. Bajado de 6 a 1 en octubre de 2026: era el bono
+    // mas entregado pese a ser de los menos probables (ver el comentario
+    // largo en seed.ts).
+    weight: 1,
   },
   {
     clave: 'premio-sorpresa',
