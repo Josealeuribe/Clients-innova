@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.cache/
+.vite/
+.git/
+.gitignore
+# .env queda fuera: el VITE_API_URL del build entra por ARG en el Dockerfile.
+# (el .env local apunta al backend de Render y se colaria en el bundle)
+.env
+.env.*
+!.env.example
+*.log
+logs/
+*.tsbuildinfo
+Dockerfile
+.dockerignore

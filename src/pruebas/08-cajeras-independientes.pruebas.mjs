@@ -19,8 +19,9 @@ async function entrar(credenciales) {
 }
 
 // Crea un cliente con bono pendiente EN LA SEDE PEDIDA y devuelve su código.
-// Se gira hasta que salga un premio de esa sede: desde que el canje cruzado
+// Se registra hasta que el bono caiga en esa sede: desde que el canje cruzado
 // está prohibido, un bono de otro casino no le sirve a una cajera concreta.
+// La sede se sortea al crear el bono y ya no depende del premio que salga.
 async function bonoNuevoEn(claveSede, intentos = 40) {
   for (let i = 0; i < intentos; i++) {
     const giro = await api('/ruleta/girar-anonimo', { method: 'POST' })
@@ -30,7 +31,7 @@ async function bonoNuevoEn(claveSede, intentos = 40) {
     })
     if (registro.body?.bono?.sedeRedencion?.clave === claveSede) return registro.body.bono.codigo
   }
-  throw new Error(`No salió ningún premio de la sede "${claveSede}" en ${intentos} giros.`)
+  throw new Error(`Ningún bono cayó en la sede "${claveSede}" en ${intentos} giros.`)
 }
 
 async function main() {
@@ -112,10 +113,10 @@ async function main() {
   // 4c) La auditoría del admin distingue el casino ASIGNADO del casino donde
   //     realmente se entregó. Si difieren, el bono se redimió en otra sede.
   assert(!!filaA.sede, 'la auditoría dice dónde se entregó')
-  assert('sedeRedencion' in filaA, 'la auditoría también trae el casino asignado al premio')
+  assert('sedeRedencion' in filaA, 'la auditoría también trae el casino asignado al bono')
 
-  // 4d) EL BONO SOLO SE REDIME EN SU CASINO. Se genera uno de Ventura Plaza y
-  //     se intenta canjear desde Av. 0: debe rechazarse.
+  // 4d) EL BONO SOLO SE REDIME EN SU CASINO. Se genera uno asignado a Ventura
+  //     Plaza y se intenta canjear desde Av. 0: debe rechazarse.
   const VENTURA = { identifier: 'katalina.soto@grancasino.com.co', password: 'Katalina1093788802' }
   const ventura = await entrar(VENTURA)
   assert(ventura.staff?.sede?.clave === 'ventura-plaza', 'Katalina pertenece a Ventura Plaza')
@@ -125,7 +126,7 @@ async function main() {
     method: 'POST',
     headers: authHeader(a.token), // Alisson es de Av. 0
   })
-  assert(cruzado.status === 403, 'una cajera de Av. 0 NO puede redimir un bono de Ventura Plaza (403)')
+  assert(cruzado.status === 403, 'una cajera de Av. 0 NO puede redimir un bono asignado a Ventura Plaza (403)')
   assert(!!cruzado.body?.sedeRequerida, 'el rechazo dice a qué casino debe ir el cliente')
 
   const intacto = await api(`/cajero/codigo/${codigoVentura}`, { headers: authHeader(a.token) })

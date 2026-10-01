@@ -60,7 +60,7 @@ export interface BonoInfo {
 // --- Vigencia de la promoción ---
 //
 // Cada premio tiene SU PROPIA fecha de vencimiento: pueden convivir un bono que
-// vence el 30 de septiembre con otro que se lance después y venza en noviembre.
+// vence el 31 de octubre con otro que se lance después y venza en diciembre.
 // Por eso el contrato es una LISTA y no una fecha suelta.
 
 export interface VigenciaPremio {
@@ -74,7 +74,6 @@ export interface VigenciaPremio {
   vencido: boolean
   /** Días completos que faltan, contados por fecha de calendario colombiana. */
   diasRestantes: number
-  sede: Sede | null
   /** Bonos de este premio que siguen sin redimir. */
   bonosPendientes: number
 }

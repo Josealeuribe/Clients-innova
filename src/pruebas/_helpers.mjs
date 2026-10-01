@@ -59,8 +59,13 @@ export function createSuite(name) {
 // Crea un cliente con bono pendiente ASIGNADO A LA SEDE PEDIDA.
 //
 // Desde que un bono solo se redime en su casino, no basta con generar un bono
-// cualquiera: si sale de otra sede, la cajera de la prueba no puede canjearlo
+// cualquiera: si cae en otra sede, la cajera de la prueba no puede canjearlo
 // y el fallo no diría nada útil sobre lo que se estaba probando.
+//
+// Se reintenta porque la sede se sortea al crear el bono y no se puede pedir
+// (ver src/utils/sorteoPremios.ts). El sorteo es por déficit, así que la sede
+// más adelantada es la menos probable — pero cada intento fallido acerca a las
+// otras dos y sube su probabilidad, de modo que la espera se corrige sola.
 export async function registrarConBonoEn(claveSede, intentos = 40) {
   for (let i = 0; i < intentos; i++) {
     const giro = await api('/ruleta/girar-anonimo', { method: 'POST' })
@@ -70,7 +75,7 @@ export async function registrarConBonoEn(claveSede, intentos = 40) {
     })
     if (registro.body?.bono?.sedeRedencion?.clave === claveSede) return registro
   }
-  throw new Error(`No salió ningún premio de la sede "${claveSede}" en ${intentos} giros.`)
+  throw new Error(`Ningún bono cayó en la sede "${claveSede}" en ${intentos} giros.`)
 }
 
 export function datoHace(anios) {

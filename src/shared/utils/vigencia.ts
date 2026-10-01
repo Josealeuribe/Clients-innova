@@ -5,8 +5,8 @@ import type { VigenciaPremio } from '@/shared/api/types'
 // `timeZone` va explícito y no se deja al navegador. Las vigencias están
 // escritas al último instante del día en Colombia (23:59:59 -05:00), así que un
 // equipo configurado en otro huso — pasa en los computadores de caja y en los
-// celulares en roaming — renderizaría "1 de octubre" para un bono que vence el
-// 30 de septiembre. Un día de diferencia en la fecha que se le promete a un
+// celulares en roaming — renderizaría "1 de noviembre" para un bono que vence
+// el 31 de octubre. Un día de diferencia en la fecha que se le promete a un
 // cliente no es un detalle cosmético.
 const ZONA = 'America/Bogota'
 
@@ -55,7 +55,7 @@ export function estadoDeVigencia(iso: string, ahoraIso?: string | null) {
 
 // "vence hoy" / "quedan 3 días". Es lo que convierte una fecha en algo
 // accionable: en el mostrador nadie calcula mentalmente cuántos días faltan
-// hasta el 30 de septiembre.
+// hasta el 31 de octubre.
 export function textoRestante(vigencia: Pick<VigenciaPremio, 'vencido' | 'diasRestantes'>) {
   if (vigencia.vencido) return 'Vencido'
   const dias = vigencia.diasRestantes

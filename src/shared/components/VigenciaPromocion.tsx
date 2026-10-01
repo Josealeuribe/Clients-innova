@@ -1,4 +1,4 @@
-import { CalendarClock, CircleAlert, MapPin } from 'lucide-react'
+import { CalendarClock, CircleAlert } from 'lucide-react'
 import type { VigenciaPremio, VigenciasResponse } from '@/shared/api/types'
 import {
   colorVigencia,
@@ -17,7 +17,7 @@ import {
 //
 // Así que vive aquí una sola vez, en dos presentaciones:
 //
-//   VigenciaResumen  — la línea de titular: "válido hasta el 30 de septiembre".
+//   VigenciaResumen  — la línea de titular: "válido hasta el 31 de octubre".
 //   RegistroVigencias — la tabla premio por premio, porque cada premio tiene SU
 //                       fecha y pueden convivir varias a la vez.
 
@@ -214,13 +214,6 @@ function FilaVigencia({
             <span className="text-[10px] font-bold text-[#D4AF37] tracking-wider">TU PREMIO</span>
           )}
         </div>
-
-        {vigencia.sede && (
-          <p className="text-xs text-[#6B5D3F] mt-1 flex items-center gap-1">
-            <MapPin size={11} className="flex-shrink-0" />
-            <span className="truncate">{vigencia.sede.nombre}</span>
-          </p>
-        )}
 
         {mostrarPendientes && (
           <p className="text-xs text-[#6B5D3F] mt-1">
