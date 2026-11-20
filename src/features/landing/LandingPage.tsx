@@ -26,6 +26,7 @@ export default function LandingPage({ navigate }: Props) {
       <PrizesSection
         prizes={prizes}
         getMarketingTag={getMarketingTag}
+        onRoulette={irARuleta}
       />
 
       <HowItWorksSection steps={steps} />

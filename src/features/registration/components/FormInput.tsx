@@ -9,6 +9,9 @@ interface Props {
   error?: string
   checking?: boolean
   disabled?: boolean
+  /** Solo dígitos: se descarta cualquier letra o símbolo mientras se escribe o se pega. */
+  soloNumeros?: boolean
+  maxLength?: number
 }
 
 export default function FormInput({
@@ -20,6 +23,8 @@ export default function FormInput({
   error,
   checking,
   disabled = false,
+  soloNumeros = false,
+  maxLength,
 }: Props) {
   return (
     <div className="flex flex-col gap-1">
@@ -32,7 +37,13 @@ export default function FormInput({
           type={type}
           placeholder={placeholder}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            const v = soloNumeros ? event.target.value.replace(/\D/g, '') : event.target.value
+            onChange(maxLength ? v.slice(0, maxLength) : v)
+          }}
+          inputMode={soloNumeros ? 'numeric' : undefined}
+          pattern={soloNumeros ? '[0-9]*' : undefined}
+          maxLength={maxLength}
           disabled={disabled}
           className={`w-full px-4 py-3 rounded-xl text-sm text-[#F5E6C8] bg-[#121009] border transition-all outline-none
             placeholder:text-[#4A3D28] disabled:opacity-40 disabled:cursor-not-allowed

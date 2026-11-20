@@ -1,20 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
-import { X, CircleCheck, Lock, Info, CalendarClock } from 'lucide-react'
+import { X, CircleCheck, Lock, Info, CalendarClock, Gift, Sparkles, Crown } from 'lucide-react'
 import type { Page } from '@/shared/types/navigation'
 import { useAuth } from '@/shared/context/AuthContext'
 import Footer from '@/shared/components/Footer'
 import BackButton from '@/shared/components/BackButton'
-import { RouletteSpinCommand } from './types/roulette.types'
-import { TOTAL_POCKETS } from './constants/roulette.constants'
-import Roulette3D from './components/Roulette3D'
+// RULETA 3D DESACTIVADA (noviembre de 2026). Esta vista ahora juega con la
+// tragamonedas 3D. El código de la ruleta NO se borró: Roulette3D.tsx, sus
+// tipos y constantes siguen intactos, y su uso en esta página quedó comentado
+// más abajo (busca "RULETA 3D"). Para volver a ella: descomentar estos tres
+// imports y el bloque <Roulette3D />, y restaurar la lógica de spinCommand.
+// import { RouletteSpinCommand } from './types/roulette.types'
+// import { TOTAL_POCKETS } from './constants/roulette.constants'
+// import Roulette3D from './components/Roulette3D'
+import SlotMachine3D, {
+  combinacionPara,
+  type GiroTragamonedas,
+} from '../landing/components/SlotMachine3D'
 import { PRIZES } from '@/shared/data/prizes'
 import { spinRoulette, fetchGirosRestantes, ApiError } from '@/shared/api/client'
 import { createRouletteSound } from '@/shared/audio/rouletteSound'
 import { useVigencias } from '@/shared/hooks/useVigencias'
 import { useBloquearScroll } from '@/shared/hooks/useBloquearScroll'
-import { RegistroVigencias, VigenciaResumen } from '@/shared/components/VigenciaPromocion'
+import { VigenciaResumen } from '@/shared/components/VigenciaPromocion'
+import VigenciaBoletos from './components/VigenciaBoletos'
 import { formatVigencia } from '@/shared/utils/vigencia'
 import { usePremioPendiente } from '@/shared/context/PremioPendienteContext'
+import fichardoBono from '@/shared/assets/images/fichardo-bono.png'
 
 interface Props {
   navigate: (page: Page) => void
@@ -62,14 +73,24 @@ interface PrizeModalProps {
    * inventarse una que después no se cumpla.
    */
   vigenciaHasta: string | null
+  /** Giros que le quedan: si hay, el modal ofrece seguir girando. */
+  restantes: number
+  /**
+   * Si en este giro salió un premio MENOR que el que ya tenía, cuál fue: el
+   * visitante conserva el mejor y se le dice.
+   */
+  premioMenor: string | null
   onClaim: () => void
   onClose: () => void
   /** Sale a la vista de términos conservando el premio, para poder volver. */
   onVerCondiciones: () => void
 }
 
-function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose, onVerCondiciones }: PrizeModalProps) {
-  const prize = PRIZES[segmentIndex]
+function PrizeModal({ segmentIndex, vigenciaHasta, restantes, premioMenor, onClaim, onClose, onVerCondiciones }: PrizeModalProps) {
+  // Un índice guardado en la sesión antes de retirar premios puede quedar
+  // fuera del catálogo: se muestra el bono de $10.000, que es lo que el backend
+  // entrega en ese caso.
+  const prize = PRIZES[segmentIndex] ?? PRIZES[0]
   const { monetary } = prize
 
   // Congela la pagina de atras: sin esto la rueda del raton seguia desplazando
@@ -116,6 +137,11 @@ function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose, onVerCondic
           {prize.prize}
         </h2>
         <p className="text-[#9A7B50] text-sm mb-2">{prize.detail}</p>
+        {premioMenor && (
+          <p className="text-xs text-[#C4A97A] mt-2">
+            Esta vez salió un {premioMenor}, pero conservas tu premio mayor.
+          </p>
+        )}
 
         <div className="my-5 mx-auto w-3/4 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
 
@@ -160,6 +186,18 @@ function PrizeModal({ segmentIndex, vigenciaHasta, onClaim, onClose, onVerCondic
           Reclamar mi Premio
         </button>
 
+        {/* Seguir girando NO renuncia al premio: se conserva y, si en los
+            giros que quedan sale uno mayor, se cambia por ese. */}
+        {restantes > 0 && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-xl text-sm font-semibold text-[#D4AF37] border border-[#D4AF37]/40 hover:bg-[#D4AF37]/10 transition-all mb-3"
+          >
+            Seguir girando · {restantes === 1 ? 'te queda 1 giro' : `te quedan ${restantes} giros`}
+          </button>
+        )}
+
         {/* Antes esto llamaba a onClose, es decir, solo cerraba el modal: el
             botón decía "Ver condiciones" y no llevaba a ninguna parte. Ahora
             abre los términos de verdad, conservando el premio para poder
@@ -187,7 +225,7 @@ interface YaParticipasteModalProps {
 
 // La promocion da un unico bono por persona (BonoGanado.clienteId es @unique
 // en la base). Si el cliente que tiene la sesion abierta ya lo obtuvo, la
-// ruleta no vuelve a girar: se le explica por que en vez de dejarlo girar y
+// tragamonedas no vuelve a girar: se le explica por que en vez de dejarlo girar y
 // fallar despues al reclamar.
 function YaParticipasteModal({ tieneBono, bonoCanjeado, codigo, onClose, onVerCuenta }: YaParticipasteModalProps) {
   useBloquearScroll(true)
@@ -221,19 +259,19 @@ function YaParticipasteModal({ tieneBono, bonoCanjeado, codigo, onClose, onVerCu
 
         <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2">YA PARTICIPASTE</p>
         <h2 className="text-2xl md:text-3xl font-black text-[#F5E6C8] mb-3 leading-tight">
-          {!tieneBono ? 'La ruleta es para nuevos jugadores' : bonoCanjeado ? 'Ya redimiste tu bono' : 'Ya tienes tu bono'}
+          {!tieneBono ? 'La tragamonedas es para nuevos jugadores' : bonoCanjeado ? 'Ya redimiste tu bono' : 'Ya tienes tu bono'}
         </h2>
 
         <div className="bg-[#D4AF37]/8 border border-[#D4AF37]/20 rounded-xl p-4 mb-6 text-sm text-[#C4A97A]">
           {!tieneBono ? (
             <>
-              Tu cuenta ya está creada, así que la promoción de bienvenida no aplica: la ruleta es únicamente para
+              Tu cuenta ya está creada, así que la promoción de bienvenida no aplica: la tragamonedas es únicamente para
               quienes todavía no están registrados. Consulta tus beneficios activos desde tu cuenta.
             </>
           ) : bonoCanjeado ? (
             <>
               Este premio ya fue entregado en la sede correspondiente. La promoción de bienvenida es de un solo bono por
-              persona, así que la ruleta ya no está disponible para tu cuenta.
+              persona, así que la tragamonedas ya no está disponible para tu cuenta.
             </>
           ) : (
             <>
@@ -267,9 +305,50 @@ function YaParticipasteModal({ tieneBono, bonoCanjeado, codigo, onClose, onVerCu
   )
 }
 
-// La ruleta debe girar al menos 5 segundos. Se dejan 5.8 para que la caída de
-// la bola y sus rebotes finales se alcancen a apreciar sin que se haga largo.
-const DURACION_GIRO_MS = 5800
+// RULETA 3D (desactivada): la ruleta giraba 5.8 s para que se apreciara la
+// caída de la bola.
+// const DURACION_GIRO_MS = 5800
+
+// Lo que tarda la tragamonedas en detener el tercer rodillo en el modo
+// controlado (palanca 0.35 s + 2.4 s + 2 × 0.75 s, ver SlotMachine3D). El
+// sonido de giro se programa con esta duración.
+const DURACION_GIRO_MS = 4300
+
+// Giros por visitante si el servidor todavía no respondió. La cifra real
+// manda (GIROS_MAXIMOS en server/src/routes/ruleta.routes.ts).
+const GIROS_POR_DEFECTO = 5
+
+// La tabla de pagos, tal cual la ve el cliente. Las claves conectan con el
+// catálogo (PRIZES) y con los símbolos de la máquina (SIMBOLO_DE_PREMIO).
+const TABLA_DE_PAGOS = [
+  { clave: 'bono-10000', simbolo: '🍒', nombre: 'Tres cerezas', etiqueta: 'El más frecuente' },
+  { clave: 'bono-20000', simbolo: '🔔', nombre: 'Tres campanas', etiqueta: 'Menos frecuente' },
+  { clave: 'bono-50000', simbolo: '7', nombre: 'Tres sietes', etiqueta: 'Premio mayor' },
+] as const
+
+function SimboloPago({ simbolo, className = '' }: { simbolo: string; className?: string }) {
+  if (simbolo === '7') {
+    return (
+      <span
+        className={`font-display font-black leading-none ${className}`}
+        style={{
+          color: '#E5281D',
+          WebkitTextStroke: '1px #A0832A',
+          textShadow: '0 0 12px rgba(229,40,29,0.45)',
+        }}
+      >
+        7
+      </span>
+    )
+  }
+  return <span className={`leading-none ${className}`}>{simbolo}</span>
+}
+
+interface ResultadoPendiente {
+  /** Índice en PRIZES, o null si el giro salió sin premio. */
+  premioIdx: number | null
+  ticket: string | null
+}
 
 export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   // Premio ganado y aún sin reclamar. Vive por encima de esta vista para que
@@ -277,40 +356,35 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   const { premioPendiente, recordar, olvidar } = usePremioPendiente()
 
   const [isSpinning, setIsSpinning] = useState(false)
-  // Los tres arrancan de lo que haya guardado: si el visitante vuelve de leer
-  // las condiciones, la vista se vuelve a montar desde cero y esto es lo que
-  // hace que reaparezca su premio en vez de una ruleta en blanco.
+  // El MEJOR premio ganado hasta ahora (el que se reclama). Arranca de lo que
+  // haya guardado: si el visitante vuelve de leer las condiciones, la vista se
+  // monta de nuevo y así reaparece su premio.
   const [wonPrizeIdx, setWonPrizeIdx] = useState<number | null>(premioPendiente?.segmentIndex ?? null)
-  const [pendingPrizeIdx, setPendingPrizeIdx] = useState<number | null>(null)
   const [prizeTicket, setPrizeTicket] = useState<string | null>(premioPendiente?.ticket ?? null)
+  const [pendiente, setPendiente] = useState<ResultadoPendiente | null>(null)
+  const [premioMenor, setPremioMenor] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(premioPendiente !== null)
   const [showConfetti, setShowConfetti] = useState(false)
-  const [spinCommand, setSpinCommand] = useState<RouletteSpinCommand | null>(null)
+  // RULETA 3D: const [spinCommand, setSpinCommand] = useState<RouletteSpinCommand | null>(null)
+  const [giro, setGiro] = useState<GiroTragamonedas | null>(null)
   const [spinError, setSpinError] = useState<string | null>(null)
+  const [mensaje, setMensaje] = useState<string | null>(null)
 
   const { cliente, bono, bonoCanjeado, token, loading: authLoading } = useAuth()
 
   // Hasta cuándo se puede redimir cada premio. Se consulta al entrar, no al
-  // ganar: el visitante debe poder ver la fecha ANTES de decidir si gira, y
-  // hasta ahora la única forma de conocerla era ganar un bono y entrar a su
-  // cuenta.
+  // ganar: el visitante debe poder ver la fecha ANTES de decidir si gira.
   const { datos: vigencias, error: vigenciasError } = useVigencias()
 
-  // La ruleta es SOLO para visitantes sin cuenta: es una promocion de
+  // La tragamonedas es SOLO para visitantes sin cuenta: es una promocion de
   // captacion. Cualquier cliente con la sesion abierta queda bloqueado, tenga
-  // bono o no. Antes se exigia ademas `yaParticipo`, y eso dejaba pasar al
-  // cliente registrado sin bono, que giraba y despues no tenia como reclamar
-  // (el reclamo pasa por el registro, y su correo ya existia).
-  //
-  // Se bloquea tambien mientras la sesion se esta restaurando: hasta que /me
-  // responde no sabemos si hay cliente detras, y sin esto un clic rapido al
-  // entrar directo a /ruleta se colaba antes de la respuesta.
+  // bono o no. Tambien mientras la sesion se esta restaurando: hasta que /me
+  // responde no sabemos si hay cliente detras.
   const giroBloqueado = authLoading || !!cliente
   const [showYaParticipaste, setShowYaParticipaste] = useState(false)
 
-  // Giros que le quedan al visitante. El conteo lo lleva el servidor contra
-  // una cookie httpOnly, así que recargar la página NO lo reinicia. Se
-  // consulta al entrar para poder mostrarlo sin gastar un giro.
+  // Giros que le quedan al visitante. El conteo lo lleva el servidor, así que
+  // recargar la página NO lo reinicia.
   const [restantes, setRestantes] = useState<number | null>(null)
   const [maximo, setMaximo] = useState<number | null>(null)
 
@@ -328,9 +402,10 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   }, [cliente])
 
   const sinGiros = restantes === 0
+  const totalGiros = maximo ?? GIROS_POR_DEFECTO
+  const usados = restantes === null ? 0 : totalGiros - restantes
 
-  // El sonido se crea una sola vez y se corta al desmontar, para que no siga
-  // sonando si el usuario navega a otra vista a mitad del giro.
+  // El sonido se crea una sola vez y se corta al desmontar.
   const sonido = useRef(createRouletteSound())
   useEffect(() => {
     const actual = sonido.current
@@ -340,24 +415,25 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
   const spin = async () => {
     if (isSpinning || showModal) return
 
-    // Se corta antes de llamar al backend. Mientras carga la sesion no se
-    // abre el modal: todavia no hay nada que explicarle al usuario.
     if (giroBloqueado) {
       if (!authLoading) setShowYaParticipaste(true)
       return
     }
     if (sinGiros) {
-      setSpinError(`Ya usaste tus ${maximo ?? 3} giros. Regístrate para reclamar el premio que obtuviste.`)
+      setSpinError(
+        wonPrizeIdx !== null
+          ? `Ya usaste tus ${totalGiros} giros. Reclama el premio que obtuviste.`
+          : `Ya usaste tus ${totalGiros} giros.`,
+      )
       return
     }
 
     setSpinError(null)
+    setMensaje(null)
     setIsSpinning(true)
 
-    // El premio ya NO se decide aquí: el servidor hace el sorteo ponderado
-    // real y firma un ticket que se reclama al completar el registro.
-    // targetPocket sigue siendo local porque solo controla dónde se detiene
-    // visualmente la ruleta 3D (es decorativo, no revela ni afecta el premio).
+    // El resultado lo decide el servidor: si el giro gana y qué bono. La
+    // máquina solo anima hasta la combinación que corresponde.
     let result
     try {
       result = await spinRoulette(token)
@@ -365,77 +441,102 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
       setMaximo(result.maximo)
     } catch (error) {
       setIsSpinning(false)
-      setSpinError(error instanceof ApiError ? error.message : 'No se pudo girar la ruleta. Intenta de nuevo.')
-      // El backend es la autoridad: si rechazó por giros agotados, se
-      // sincroniza el contador para que el botón quede coherente.
+      setSpinError(error instanceof ApiError ? error.message : 'No se pudo girar la máquina. Intenta de nuevo.')
       void fetchGirosRestantes()
         .then((r) => setRestantes(r.restantes))
         .catch(() => {})
       return
     }
 
-    const targetPocket = Math.floor(Math.random() * TOTAL_POCKETS)
-    const targetPrize = PRIZES.findIndex((p) => p.clave === result.premio.clave)
+    // Una clave fuera del catálogo es un premio retirado: el registro lo
+    // convierte en el bono de $10.000 (PRIZES[0]), así que eso es lo que se muestra.
+    const clave = result.premio?.clave ?? null
+    const premioIdx = clave === null ? null : Math.max(0, PRIZES.findIndex((p) => p.clave === clave))
+    setPendiente({ premioIdx, ticket: result.ticket })
 
-    setWonPrizeIdx(null)
-    setPendingPrizeIdx(targetPrize)
-    setPrizeTicket(result.ticket)
-    setShowModal(false)
-
-    // El sonido se dispara con el mismo comando que la animación para que
-    // vayan sincronizados. Va dentro del clic, que es el gesto de usuario que
-    // los navegadores exigen para permitir audio.
     sonido.current.spin(DURACION_GIRO_MS)
 
-    setSpinCommand({
+    // RULETA 3D:
+    // const targetPocket = Math.floor(Math.random() * TOTAL_POCKETS)
+    // setSpinCommand({ id: Date.now(), targetPocket, durationMs: DURACION_GIRO_MS })
+    setGiro({
       id: Date.now(),
-      targetPocket,
-      durationMs: DURACION_GIRO_MS,
+      simbolos: combinacionPara(premioIdx === null ? null : PRIZES[premioIdx].clave),
     })
   }
 
   const handleSpinComplete = () => {
-    if (pendingPrizeIdx === null) return
-
+    if (!pendiente) return
     setIsSpinning(false)
-    setWonPrizeIdx(pendingPrizeIdx)
-    // Se guarda ya, no al abrir los términos: a partir de aquí el premio
-    // existe y debe sobrevivir a cualquier cambio de vista.
-    if (prizeTicket) recordar({ segmentIndex: pendingPrizeIdx, ticket: prizeTicket })
+    const { premioIdx, ticket } = pendiente
+    setPendiente(null)
+
+    if (premioIdx === null || !ticket) {
+      sonido.current.stop()
+      const quedan = restantes ?? 0
+      setMensaje(
+        quedan > 0
+          ? `Esta vez no hubo combinación ganadora. ${quedan === 1 ? 'Te queda 1 giro' : `Te quedan ${quedan} giros`}, ¡sigue intentando!`
+          : wonPrizeIdx !== null
+          ? 'Esta vez no hubo combinación ganadora. Ya usaste tus giros: reclama tu premio.'
+          : 'Esta vez no hubo combinación ganadora.',
+      )
+      return
+    }
+
+    // Puede salir un segundo premio: se conserva el MAYOR (un cliente
+    // reclama un solo bono).
+    const nuevo = PRIZES[premioIdx] ?? PRIZES[0]
+    const actual = wonPrizeIdx === null ? null : PRIZES[wonPrizeIdx] ?? PRIZES[0]
+    if (!actual || nuevo.amount >= actual.amount) {
+      setWonPrizeIdx(premioIdx)
+      setPrizeTicket(ticket)
+      setPremioMenor(null)
+      recordar({ segmentIndex: premioIdx, ticket })
+    } else {
+      setPremioMenor(nuevo.prize)
+    }
+
     setShowConfetti(true)
     sonido.current.win()
-
-    window.setTimeout(() => setShowModal(true), 500)
+    window.setTimeout(() => setShowModal(true), 600)
     window.setTimeout(() => setShowConfetti(false), 4000)
   }
 
   const handleClaim = () => {
     if (wonPrizeIdx !== null && prizeTicket) {
-      onPrizeWon(PRIZES[wonPrizeIdx].prize, prizeTicket)
+      onPrizeWon((PRIZES[wonPrizeIdx] ?? PRIZES[0]).prize, prizeTicket)
     }
-
-    // Ya pasó al registro, que lleva su propia copia del premio y del ticket:
-    // dejarlo aquí haría reaparecer el modal al volver a la ruleta.
+    // Ya pasó al registro, que lleva su propia copia del premio y del ticket.
     olvidar()
     setShowModal(false)
     navigate('register')
   }
 
-  // Cerrar con la X es renunciar al premio en esta vista: se olvida para que no
-  // vuelva a saltar solo. El ticket sigue vivo en el servidor sus 30 minutos,
-  // pero sin el modal ya no hay forma de reclamarlo desde aquí, que es
-  // justamente lo que el visitante pidió al cerrar.
+  // Cerrar el modal ya NO es renunciar: con varios giros, el visitante puede
+  // seguir jugando y su premio queda guardado (botón "Reclamar" de abajo).
   const handleCerrarModal = () => {
-    olvidar()
     setShowModal(false)
+    setPremioMenor(null)
   }
 
-  // Salir a leer las condiciones NO es renunciar: el premio se conserva y el
-  // botón de volver de los términos trae de vuelta a este mismo modal.
+  // Salir a leer las condiciones tampoco es renunciar.
   const handleVerCondiciones = () => {
     setShowModal(false)
     navigate('terms')
   }
+
+  const premioGanado = wonPrizeIdx === null ? null : PRIZES[wonPrizeIdx] ?? PRIZES[0]
+
+  const textoBoton = isSpinning
+    ? 'Girando...'
+    : authLoading
+    ? 'Cargando...'
+    : cliente
+    ? 'Ya tienes cuenta'
+    : sinGiros
+    ? 'Giros agotados'
+    : 'Girar'
 
   return (
     <div
@@ -461,121 +562,253 @@ export default function RoulettePage({ navigate, onPrizeWon }: Props) {
         <PrizeModal
           segmentIndex={wonPrizeIdx}
           vigenciaHasta={
-            vigencias?.vigencias.find((v) => v.clave === PRIZES[wonPrizeIdx]?.clave)?.vigenciaHasta ?? null
+            vigencias?.vigencias.find((v) => v.clave === (PRIZES[wonPrizeIdx] ?? PRIZES[0]).clave)?.vigenciaHasta ?? null
           }
+          restantes={restantes ?? 0}
+          premioMenor={premioMenor}
           onClaim={handleClaim}
           onClose={handleCerrarModal}
           onVerCondiciones={handleVerCondiciones}
         />
       )}
 
-      <div className="w-full max-w-lg mb-4 z-10">
+      <div className="w-full max-w-6xl mb-4 z-10">
         <BackButton />
       </div>
 
-      <div className="text-center mb-1 z-10">
-        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2">
-          PROMOCIÓN DE BIENVENIDA
+      <div className="text-center mb-2 z-10">
+        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2">PROMOCIÓN DE BIENVENIDA</p>
+        <h1 className="text-3xl md:text-5xl font-black text-[#F5E6C8]">¡Es tu momento de ganar!</h1>
+        <p className="text-[#9A7B50] mt-2 text-sm md:text-base max-w-xl mx-auto">
+          Presiona <strong className="text-[#D4AF37]">Girar</strong> o tira de la palanca. Si en la línea roja caen
+          tres símbolos iguales, ganas el bono de esa combinación.
         </p>
-        <h1 className="text-3xl md:text-4xl font-black text-[#F5E6C8]">
-          ¡Es tu momento de ganar!
-        </h1>
-        <p className="text-[#9A7B50] mt-2 text-sm max-w-sm mx-auto">
-          Presiona el botón, gira la ruleta y descubre el beneficio que tenemos para ti.
-        </p>
-
-        {/* La regla se dice ANTES de girar, no cuando ya se agotaron los
-            intentos: el jugador debe saber a qué atenerse desde el principio. */}
-        {!cliente && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/8 px-4 py-1.5">
-            <Info size={13} className="text-[#D4AF37] flex-shrink-0" />
-            <span className="text-xs text-[#C4A97A]">
-              {restantes === null || maximo === null ? (
-                'Tienes 3 intentos en total'
-              ) : restantes === 0 ? (
-                <span className="text-[#eab308]">Usaste tus {maximo} intentos</span>
-              ) : (
-                <>
-                  Tienes <strong className="text-[#D4AF37]">{maximo} intentos</strong> en total ·{' '}
-                  {restantes === 1 ? 'te queda 1' : `te quedan ${restantes}`}
-                </>
-              )}
-            </span>
-          </div>
-        )}
-
-        {/* Hasta cuándo se puede redimir, dicho antes de girar. La fecha sale
-            de la base (no está escrita aquí), así que extender la promoción se
-            refleja en esta vista sin desplegar el frontend. */}
         <div className="mt-3 flex justify-center">
           <VigenciaResumen datos={vigencias} error={vigenciasError} variante="chip" />
         </div>
       </div>
 
-      {/* La ruleta ya no usa SVG ni rotateX. La profundidad proviene de geometría real. */}
-      <div className="w-full max-w-[860px] h-[390px] sm:h-[500px] md:h-[590px] -mt-2 md:-mt-8 z-0">
-        <Roulette3D
-          spinCommand={spinCommand}
-          onSpinComplete={handleSpinComplete}
-          quality="high"
-          className="w-full h-full"
-        />
-      </div>
+      <div className="w-full max-w-6xl grid gap-6 lg:gap-10 lg:grid-cols-[1.35fr_1fr] items-center z-10">
+        {/* ---------------- Máquina + botón ---------------- */}
+        <div className="flex flex-col items-center">
+          <div className="relative w-full h-[400px] sm:h-[500px] md:h-[580px]">
+            {/* RULETA 3D (desactivada, ver el comentario de los imports):
+            <Roulette3D
+              spinCommand={spinCommand}
+              onSpinComplete={handleSpinComplete}
+              quality="high"
+              className="w-full h-full"
+            />
+            */}
+            <SlotMachine3D
+              className="w-full h-full"
+              giro={giro}
+              onGiroCompleto={handleSpinComplete}
+              onPalanca={() => void spin()}
+            />
 
-      <div className="text-center -mt-7 md:-mt-12 z-10">
-        <button
-          type="button"
-          onClick={() => void spin()}
-          disabled={isSpinning || showModal || sinGiros}
-          className="px-10 py-4 rounded-full font-black text-base tracking-wide transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{
-            background:
-              isSpinning || giroBloqueado || sinGiros
-                ? 'linear-gradient(135deg, #8A7020, #6A5518)'
-                : 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
-            color: '#0a0805',
-            letterSpacing: '0.1em',
-            minWidth: 250,
-            animation: isSpinning || giroBloqueado || sinGiros ? 'none' : 'pulse-glow 2.5s ease-in-out infinite',
-            transform: isSpinning ? 'scale(0.97)' : 'scale(1)',
-          }}
-        >
-          {isSpinning
-            ? '⏳ Descubriendo tu premio...'
-            : authLoading
-            ? 'Cargando...'
-            : cliente
-            ? 'Ya tienes cuenta'
-            : sinGiros
-            ? 'Giros agotados'
-            : 'Girar Ruleta'}
-        </button>
+            {/* Fichardo con su bono, al costado izquierdo de la máquina (la
+                palanca va a la derecha). Decorativo y sin clics. */}
+            <img
+              src={fichardoBono}
+              alt=""
+              aria-hidden="true"
+              decoding="async"
+              className="pointer-events-none select-none absolute z-10 left-0 bottom-[2%] w-[26%] max-w-[190px] min-w-[90px] fichardo-flota drop-shadow-[0_12px_28px_rgba(0,0,0,0.55)]"
+            />
+          </div>
 
-        {spinError && <p className="mt-3 text-red-400 text-xs">{spinError}</p>}
-
-        <p className="mt-3 text-[#6B5D3F] text-xs">
-          {cliente ? 'La ruleta es para nuevos jugadores' : 'Un bono por persona'} ·{' '}
           <button
             type="button"
-            onClick={() => navigate('terms')}
-            className="hover:text-[#9A7B50] transition-colors underline"
+            onClick={() => void spin()}
+            disabled={isSpinning || showModal || sinGiros}
+            className="-mt-2 px-12 py-4 rounded-full font-black text-lg tracking-[0.15em] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              background:
+                isSpinning || giroBloqueado || sinGiros
+                  ? 'linear-gradient(135deg, #8A7020, #6A5518)'
+                  : 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)',
+              color: '#0a0805',
+              minWidth: 250,
+              animation: isSpinning || giroBloqueado || sinGiros ? 'none' : 'pulse-glow 2.5s ease-in-out infinite',
+              transform: isSpinning ? 'scale(0.97)' : 'scale(1)',
+            }}
           >
-            Ver términos
+            {textoBoton.toUpperCase()}
           </button>
-        </p>
+
+          {/* Resultado del último giro / errores */}
+          <div className="min-h-[28px] mt-3 text-center" aria-live="polite">
+            {spinError && <p className="text-red-400 text-sm">{spinError}</p>}
+            {!spinError && mensaje && <p className="text-[#C4A97A] text-sm">{mensaje}</p>}
+          </div>
+
+          {/* El premio queda a la mano mientras sigue jugando. */}
+          {premioGanado && !showModal && (
+            <div
+              className="mt-2 w-full max-w-md flex items-center gap-3 rounded-2xl border border-[#D4AF37]/45 px-4 py-3"
+              style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.14), rgba(18,16,9,0.9))' }}
+            >
+              <Gift size={26} className="text-[#D4AF37] flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold tracking-[0.25em] text-[#D4AF37]">TU PREMIO</p>
+                <p className="text-[#F5E6C8] font-bold truncate">{premioGanado.prize}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleClaim}
+                className="rounded-xl px-4 py-2 text-sm font-bold text-[#0a0805]"
+                style={{ background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)' }}
+              >
+                Reclamar
+              </button>
+            </div>
+          )}
+
+          <p className="mt-3 text-[#6B5D3F] text-xs">
+            {cliente ? 'La tragamonedas es para nuevos jugadores' : 'Un bono por persona'} ·{' '}
+            <button
+              type="button"
+              onClick={() => navigate('terms')}
+              className="hover:text-[#9A7B50] transition-colors underline"
+            >
+              Ver términos
+            </button>
+          </p>
+        </div>
+
+        {/* ---------------- Tabla de premios + giros ---------------- */}
+        <div className="flex flex-col gap-5">
+          <section
+            className="rounded-3xl border border-[#D4AF37]/30 p-5 md:p-6"
+            style={{ background: 'linear-gradient(160deg, #1C1810 0%, #121009 100%)' }}
+            aria-labelledby="tabla-pagos"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles size={16} className="text-[#D4AF37]" />
+              <h2 id="tabla-pagos" className="text-[#D4AF37] text-xs font-bold tracking-[0.3em]">
+                TABLA DE PREMIOS
+              </h2>
+            </div>
+            <p className="text-sm text-[#9A7B50] mb-4">
+              Ganas cuando los <strong className="text-[#C4A97A]">tres rodillos</strong> muestran el mismo símbolo
+              sobre la <strong className="text-[#E5281D]">línea roja</strong>.
+            </p>
+
+            <ul className="flex flex-col gap-3">
+              {TABLA_DE_PAGOS.map((fila) => {
+                const premio = PRIZES.find((p) => p.clave === fila.clave)
+                const mayor = fila.clave === 'bono-50000'
+                return (
+                  <li
+                    key={fila.clave}
+                    className="relative flex items-center gap-3 rounded-2xl border px-3 py-3"
+                    style={{
+                      borderColor: mayor ? 'rgba(181,32,32,0.6)' : 'rgba(212,175,55,0.22)',
+                      background: mayor
+                        ? 'linear-gradient(135deg, rgba(181,32,32,0.18), rgba(212,175,55,0.08))'
+                        : 'rgba(10,8,5,0.55)',
+                    }}
+                  >
+                    {/* Los tres símbolos, como se ven en la máquina */}
+                    <div className="flex gap-1 flex-shrink-0">
+                      {[0, 1, 2].map((k) => (
+                        <span
+                          key={k}
+                          className="w-10 h-11 md:w-11 md:h-12 rounded-lg flex items-center justify-center text-2xl md:text-[28px]"
+                          style={{
+                            background: 'linear-gradient(180deg, #E9E2D2, #FFFDF7 50%, #E9E2D2)',
+                            boxShadow: 'inset 0 0 0 1px rgba(160,131,42,0.55)',
+                          }}
+                        >
+                          <SimboloPago simbolo={fila.simbolo} />
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] text-[#9A7B50]">{fila.nombre}</p>
+                      <p className="font-display text-xl md:text-2xl font-black text-[#F5E6C8] leading-tight">
+                        Bono ${premio ? premio.amount.toLocaleString('es-CO') : ''}
+                      </p>
+                    </div>
+                    <span
+                      className="hidden sm:flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold tracking-wider whitespace-nowrap"
+                      style={
+                        mayor
+                          ? { background: '#B52020', color: '#F5E6C8' }
+                          : { background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }
+                      }
+                    >
+                      {mayor && <Crown size={10} />}
+                      {fila.etiqueta.toUpperCase()}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="mt-4 text-xs text-[#6B5D3F]">
+              Cualquier otra combinación no tiene premio. Todos los bonos se redimen en caja, en cualquiera de
+              nuestras 3 sedes.
+            </p>
+          </section>
+
+          {/* Giros: la regla se dice ANTES de girar. */}
+          {!cliente && (
+            <section
+              className="rounded-3xl border border-[#D4AF37]/25 p-5"
+              style={{ background: 'rgba(18,16,9,0.85)' }}
+              aria-label="Tus giros"
+            >
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <Info size={15} className="text-[#D4AF37]" />
+                  <p className="text-sm font-bold text-[#F5E6C8]">Tienes {totalGiros} giros en total</p>
+                </div>
+                <p className="text-xs text-[#C4A97A]">
+                  {restantes === null
+                    ? ''
+                    : restantes === 0
+                    ? 'Sin giros'
+                    : restantes === 1
+                    ? 'Te queda 1'
+                    : `Te quedan ${restantes}`}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {Array.from({ length: totalGiros }, (_, i) => {
+                  const gastado = i < usados
+                  return (
+                    <span
+                      key={i}
+                      className="flex-1 h-9 rounded-xl flex items-center justify-center text-xs font-black"
+                      style={
+                        gastado
+                          ? { background: 'rgba(255,255,255,0.04)', color: '#4A4030', border: '1px solid rgba(212,175,55,0.1)' }
+                          : { background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)', color: '#0a0805' }
+                      }
+                      aria-label={gastado ? `Giro ${i + 1} usado` : `Giro ${i + 1} disponible`}
+                    >
+                      {i + 1}
+                    </span>
+                  )
+                })}
+              </div>
+              <p className="mt-3 text-xs text-[#9A7B50]">
+                Si ganas, puedes reclamar tu bono de una vez o seguir girando: si sale uno mayor, te quedas con el
+                mayor. Un bono por persona.
+              </p>
+            </section>
+          )}
+        </div>
       </div>
 
-      {/* El registro completo: qué premio se redime hasta cuándo. No basta con
-          el titular de arriba, porque cada premio lleva SU fecha y pueden
-          convivir varias — hoy coinciden, pero en cuanto entre un bono nuevo con
-          otra fecha esta lista es la única que lo dice sin ambigüedad. */}
-      <div className="mt-8 max-w-lg w-full z-10 relative">
-        <RegistroVigencias
-          datos={vigencias}
-          error={vigenciasError}
-          titulo="Hasta cuándo puedes redimir"
-          descripcion="Cada premio tiene su propia fecha límite. Estas son las condiciones vigentes de la promoción."
-        />
+      {/* El registro completo: qué premio se redime hasta cuándo, como boletos
+          en miniatura. La tabla anterior era:
+          <RegistroVigencias datos={vigencias} error={vigenciasError}
+            titulo="Hasta cuándo puedes redimir"
+            descripcion="Cada premio tiene su propia fecha límite. Estas son las condiciones vigentes de la promoción." /> */}
+      <div className="mt-10 max-w-5xl w-full z-10 relative">
+        <VigenciaBoletos datos={vigencias} error={vigenciasError} claveDestacada={premioGanado?.clave ?? null} />
       </div>
 
       <div className="w-full -mx-4 sm:-mx-6 mt-auto pt-20">

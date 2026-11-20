@@ -20,17 +20,17 @@ export default function HeroSection({ onRoulette, onLogin }: Props) {
         <MarqueeBanner />
       </div>
 
-      <div className="relative z-20 mx-auto max-w-7xl px-6 pt-10 md:pt-14">
+      <div className="relative z-20 mx-auto max-w-7xl px-6 pt-6 md:pt-8">
         <BackButton />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-7xl px-6">
-        <div className="grid min-h-[calc(100vh-220px)] items-center gap-6 py-8 md:grid-cols-2 md:py-6 lg:gap-10">
+      <div className="relative z-10 mx-auto max-w-[1440px] px-6">
+        <div className="grid min-h-[calc(100vh-300px)] items-center gap-6 py-4 md:grid-cols-[1fr_1.15fr] md:py-2 lg:gap-8">
           <div
             className="z-10 text-center md:text-left"
             style={{ animation: 'slide-up 0.8s ease-out forwards' }}
           >
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/8 px-4 py-1.5">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/8 px-4 py-1.5">
               <Sparkles size={14} className="text-[#D4AF37]" />
 
               <span className="text-xs font-bold tracking-widest text-[#D4AF37]">
@@ -64,7 +64,7 @@ export default function HeroSection({ onRoulette, onLogin }: Props) {
             </h1>
 
             <p className="mx-auto mb-8 max-w-lg text-lg leading-relaxed text-[#C4A97A] md:mx-0 md:text-xl">
-              Participa en nuestra promoción de bienvenida, gira la ruleta y
+              Participa en nuestra promoción de bienvenida, gira la tragamonedas y
               descubre beneficios exclusivos para disfrutar en Gran Casino Cúcuta.
             </p>
 
@@ -93,7 +93,7 @@ export default function HeroSection({ onRoulette, onLogin }: Props) {
             </p>
           </div>
 
-          <div className="relative flex items-center justify-center md:-mr-10 lg:-mr-20">
+          <div className="relative flex items-center justify-center">
             <WheelPreview3D />
           </div>
         </div>

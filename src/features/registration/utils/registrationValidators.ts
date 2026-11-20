@@ -17,15 +17,23 @@ export function edadDesdeFecha(fechaISO: string): number {
   return edad
 }
 
+export const CEDULA = 'Cédula de Ciudadanía'
+export const CEDULA_MIN = 5
+export const CEDULA_MAX = 10
+export const CELULAR_LARGO = 10
+
+// Todos los documentos: solo números. La cédula, además, entre 5 y 10 dígitos;
+// para los demás tipos no hay un rango definido.
 export function getDocumentFormatError(docNum: string, docType: string): string {
   const value = docNum.trim()
+  if (!value) return ''
 
-  if (value.length > 0 && value.length < 5) {
-    return 'El documento debe tener al menos 5 caracteres.'
+  if (!/^\d+$/.test(value)) {
+    return 'El documento solo puede contener números.'
   }
 
-  if (value.length > 0 && docType !== 'Pasaporte' && !/^\d+$/.test(value)) {
-    return 'Este tipo de documento solo debe contener números.'
+  if (docType === CEDULA && (value.length < CEDULA_MIN || value.length > CEDULA_MAX)) {
+    return `La cédula debe tener entre ${CEDULA_MIN} y ${CEDULA_MAX} dígitos.`
   }
 
   return ''
@@ -58,9 +66,11 @@ export function getBirthError(birth: string): string {
 }
 
 export function getPhoneError(phone: string): string {
-  return phone.trim().length > 0 && phone.replace(/\D/g, '').length < 7
-    ? 'Ingresa un número de celular válido.'
-    : ''
+  const value = phone.trim()
+  if (!value) return ''
+  if (!/^\d+$/.test(value)) return 'El celular solo puede contener números.'
+  if (value.length !== CELULAR_LARGO) return `El celular debe tener ${CELULAR_LARGO} dígitos.`
+  return ''
 }
 
 export function getEmailFormatError(email: string): string {

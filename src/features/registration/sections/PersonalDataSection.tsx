@@ -1,6 +1,8 @@
+import DateField from '../components/DateField'
 import FormInput from '../components/FormInput'
 import FormSelect from '../components/FormSelect'
 import { DOCUMENT_TYPES } from '../utils/registrationContent'
+import { CEDULA, CEDULA_MAX, CELULAR_LARGO } from '../utils/registrationValidators'
 
 interface Props {
   nombres: string
@@ -53,7 +55,11 @@ export default function PersonalDataSection(props: Props) {
         label="Tipo de Documento"
         options={DOCUMENT_TYPES}
         value={props.docType}
-        onChange={props.setDocType}
+        onChange={(tipo) => {
+          props.setDocType(tipo)
+          // Al pasar a cédula se recorta lo que exceda los 10 dígitos.
+          if (tipo === CEDULA && props.docNum.length > CEDULA_MAX) props.setDocNum(props.docNum.slice(0, CEDULA_MAX))
+        }}
         placeholder="Selecciona..."
         error={props.errors.docType}
       />
@@ -63,14 +69,14 @@ export default function PersonalDataSection(props: Props) {
         placeholder="1012345678"
         value={props.docNum}
         onChange={props.setDocNum}
+        soloNumeros
+        maxLength={props.docType === CEDULA ? CEDULA_MAX : undefined}
         error={props.errors.docNum}
         checking={props.checkingDocNum}
       />
 
-      <FormInput
+      <DateField
         label="Fecha de Nacimiento"
-        type="date"
-        placeholder=""
         value={props.birth}
         onChange={props.setBirth}
         error={props.errors.birth}
@@ -79,9 +85,11 @@ export default function PersonalDataSection(props: Props) {
       <FormInput
         label="Número de Celular"
         type="tel"
-        placeholder="+57 300 1234567"
+        placeholder="3001234567"
         value={props.phone}
         onChange={props.setPhone}
+        soloNumeros
+        maxLength={CELULAR_LARGO}
         error={props.errors.phone}
       />
     </div>

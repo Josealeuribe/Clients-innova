@@ -51,7 +51,7 @@ export const ROUTES: Record<Page, string> = {
 export const PAGE_TITLES: Record<Page, string> = {
   landing: 'Gran Casino Cúcuta | Gira y Gana',
   home: 'Inicio | Gran Casino Cúcuta',
-  roulette: 'Gira la Ruleta | Gran Casino Cúcuta',
+  roulette: 'Gira y Gana | Gran Casino Cúcuta',
   register: 'Crear cuenta | Gran Casino Cúcuta',
   login: 'Iniciar sesión | Gran Casino Cúcuta',
   dashboard: 'Mi cuenta | Gran Casino Cúcuta',

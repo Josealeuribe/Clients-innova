@@ -6,24 +6,29 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import { comoLlegarUrl, VENUES } from '@/shared/data/locations'
+import fichardoPin from '@/shared/assets/images/fichardo-ubicacion-pin.webp'
 
 // Un marcador por sede, no uno por ciudad. Las 3 están en Cúcuta y antes
 // aparecían agrupadas bajo un solo pin, así que el mapa no servía para saber
 // a cuál ir: es justo lo que necesita alguien con un bono asignado a una sede
 // concreta.
-const goldIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #F0C847, #D4AF37, #A0832A);
-    border: 2px solid #0a0805;
-    box-shadow: 0 0 10px rgba(212,175,55,0.8);
-  "></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-  popupAnchor: [0, -9],
+//
+// El marcador es Fichardo sosteniendo el pin. Sirve el mismo para el mapa de
+// Inicio y el del pie de pagina, porque los dos montan este componente.
+//
+// Se usa fichardo-ubicacion-pin.webp (192 px, ~13 KB), generado recortando
+// fichardo-ubicacion.png (1 MB): pintar el original a ~56 px descargaria un
+// mega por nada. Si se cambia la imagen, regenerar tambien la version pin.
+//
+// El ancla va en la PUNTA DEL PIN rojo (≈50% del ancho, ≈92% del alto de la
+// imagen), no en el centro: es la punta la que tiene que caer sobre la sede.
+const TAM_MARCADOR = 56
+const goldIcon = L.icon({
+  iconUrl: fichardoPin,
+  iconSize: [TAM_MARCADOR, TAM_MARCADOR],
+  iconAnchor: [Math.round(TAM_MARCADOR * 0.5), Math.round(TAM_MARCADOR * 0.92)],
+  popupAnchor: [0, -Math.round(TAM_MARCADOR * 0.85)],
+  className: 'marcador-fichardo',
 })
 
 // Encuadra el mapa para que las 3 sedes queden visibles. No se usa un zoom

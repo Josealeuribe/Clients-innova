@@ -138,9 +138,12 @@ export type MeResponse =
   | ({ tipo: 'cliente'; cliente: ClienteSafe; bono: BonoInfo | null } & EstadoParticipacion)
   | { tipo: 'staff'; staff: StaffSafe }
 
+// Con la tragamonedas no todos los giros ganan: en los giros sin combinación
+// ganadora `premio` y `ticket` llegan en null (ver
+// server/src/utils/planTragamonedas.ts).
 export interface SpinResponse extends GirosRestantes {
-  premio: PremioInfo
-  ticket: string
+  premio: PremioInfo | null
+  ticket: string | null
 }
 
 // Control de giros por visitante. El conteo lo lleva el servidor: recargar la

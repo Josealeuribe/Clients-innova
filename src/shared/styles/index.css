@@ -1,7 +1,45 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&display=swap');
 @import 'tailwindcss';
 
+/* Playfair trae cifras de estilo antiguo por defecto ($10.000 con dígitos de
+ * alturas distintas). En los boletos van alineadas, como en el diseño. */
+.font-display {
+  font-variant-numeric: lining-nums;
+}
+
+/* Fichardo en el talón de los boletos: flota y se balancea con los billetes.
+ * Solo transform, que el navegador anima sin recalcular el layout. Quien pide
+ * menos movimiento en su sistema lo ve quieto. */
+@keyframes fichardo-flota {
+  0%, 100% { transform: translateY(0) rotate(-4deg) scale(1); }
+  25%      { transform: translateY(-6px) rotate(0deg) scale(1.03); }
+  50%      { transform: translateY(-10px) rotate(4deg) scale(1.05); }
+  75%      { transform: translateY(-4px) rotate(0deg) scale(1.02); }
+}
+.fichardo-flota {
+  animation: fichardo-flota 3.2s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fichardo-flota { animation: none; }
+}
+
+/* Marcador de sede en los mapas (Fichardo con el pin). Leaflet le pone su
+ * propio `transform` al <img> para ubicarlo, así que la sombra va con filter
+ * y el salto al pasar el mouse con `translate`, que no pisa ese transform. */
+.marcador-fichardo {
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.55));
+  transition: translate 0.2s ease, filter 0.2s ease;
+}
+.marcador-fichardo:hover {
+  translate: 0 -5px;
+  filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 8px rgba(212, 175, 55, 0.55));
+}
+
 @theme {
+  /* Serif de los boletos de premios (clase `font-display`). */
+  --font-display: 'Playfair Display', Georgia, serif;
   --color-gold: #D4AF37;
   --color-gold-light: #F0C847;
   --color-gold-dark: #9A7B1E;

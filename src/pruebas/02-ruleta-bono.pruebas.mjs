@@ -2,15 +2,28 @@ import { api, authHeader, createSuite, registroValido, testEmail, testDocNum } f
 
 const { assert, finish } = createSuite('02 - Ruleta, asignación de bono y unicidad de códigos')
 
-const CLAVES_VALIDAS = [
-  'bono-5000', 'bono-10000', 'bono-20000',
-  'carton-bingo', 'entrada-evento', 'bono-50000', 'premio-sorpresa',
-]
+const CLAVES_VALIDAS = ['bono-10000', 'bono-20000', 'bono-50000']
+
+// Con la tragamonedas no todos los giros ganan (1 o 2 de cada 5 por
+// visitante). Cada llamada sin cookie es un visitante nuevo en su primer giro,
+// así que se repite hasta que uno salga premiado.
+async function girarHastaGanar() {
+  for (let i = 0; i < 80; i++) {
+    const g = await api('/ruleta/girar-anonimo', { method: 'POST' })
+    if (g.body?.premio) return g
+  }
+  throw new Error('80 giros seguidos sin premio: el plan de la tragamonedas no está entregando')
+}
 
 async function main() {
-  // 1) Giro anónimo: no requiere sesión y devuelve un premio + ticket
-  const giro = await api('/ruleta/girar-anonimo', { method: 'POST' })
-  assert(giro.status === 200, 'POST /ruleta/girar-anonimo (sin auth) responde 200')
+  // 1) Giro anónimo: no requiere sesión. Un giro ganador trae premio + ticket
+  const primero = await api('/ruleta/girar-anonimo', { method: 'POST' })
+  assert(primero.status === 200, 'POST /ruleta/girar-anonimo (sin auth) responde 200')
+  assert(
+    primero.body?.premio === null ? primero.body?.ticket === null : typeof primero.body?.ticket === 'string',
+    'un giro sin premio no trae ticket; uno con premio sí',
+  )
+  const giro = await girarHastaGanar()
   assert(CLAVES_VALIDAS.includes(giro.body?.premio?.clave), 'el premio devuelto tiene una clave válida del catálogo')
   assert(typeof giro.body?.ticket === 'string' && giro.body.ticket.length > 20, 'se recibe un ticket firmado')
 
@@ -18,14 +31,14 @@ async function main() {
   //    el más raro tiene weight 4/100 → probabilidad de no verlo en 40 giros es baja)
   const clavesVistas = new Set()
   for (let i = 0; i < 40; i++) {
-    const s = await api('/ruleta/girar-anonimo', { method: 'POST' })
+    const s = await girarHastaGanar()
     clavesVistas.add(s.body?.premio?.clave)
   }
-  assert(clavesVistas.size >= 5, `se observó variedad real de premios en 40 giros (vistos: ${clavesVistas.size}/7)`)
+  assert(clavesVistas.size >= 2, `se observó variedad real de premios en 40 giros (vistos: ${clavesVistas.size}/3)`)
 
   // 3) Registrar reclamando el ticket asigna el bono correspondiente. Ya no
   //    hay premios sin bono: el giro adicional se retiró de la promoción.
-  const giroCanjeable = await api('/ruleta/girar-anonimo', { method: 'POST' })
+  const giroCanjeable = await girarHastaGanar()
   const registro = await api('/auth/register', {
     method: 'POST',
     body: JSON.stringify(registroValido({ email: testEmail(), docNum: testDocNum(), ticket: giroCanjeable.body.ticket })),
@@ -37,7 +50,7 @@ async function main() {
   const token1 = registro.body.token
 
   // 4) Un segundo giro + registro (otro cliente) debe recibir un código DISTINTO
-  const giro2 = await api('/ruleta/girar-anonimo', { method: 'POST' })
+  const giro2 = await girarHastaGanar()
   const registro2 = await api('/auth/register', {
     method: 'POST',
     body: JSON.stringify(registroValido({ email: testEmail(), docNum: testDocNum(), ticket: giro2.body.ticket })),

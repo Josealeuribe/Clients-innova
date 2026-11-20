@@ -1,5 +1,6 @@
 import type { Page } from '@/shared/types/navigation'
 import { ShieldAlert } from 'lucide-react'
+import { LINEAS_AYUDA } from '@/shared/data/ayuda'
 import { useNavigation } from '@/shared/context/NavigationContext'
 import logoImg from '@/shared/assets/images/LOGO-CASINO.png'
 import logoImg2 from '@/shared/assets/images/logo.png'
@@ -400,7 +401,7 @@ export default function Footer({ navigate }: Props) {
 
           <p className="text-[#665A43] text-xs text-center flex items-center justify-center gap-1.5">
             <ShieldAlert size={13} className="flex-shrink-0" /> Solo para mayores de 18 años · Juega con
-            responsabilidad · Línea de ayuda: 01-8000-111-444
+            responsabilidad · Ayuda: {LINEAS_AYUDA.map((l) => l.numero).slice(0, 2).join(' · ')}
           </p>
         </div>
       </div>

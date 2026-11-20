@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 const MARQUEE_MESSAGES: string[] = [
-  'Gira la ruleta y descubre tu recompensa',
+  'Gira la tragamonedas y descubre tu recompensa',
   'Atrévete a visitarnos',
   'Vive la emoción de Gran Casino',
   'Haz parte de nuestra comunidad',

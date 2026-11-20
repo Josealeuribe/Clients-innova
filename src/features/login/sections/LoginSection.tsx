@@ -35,11 +35,32 @@ export default function LoginSection({
   onForgot,
 }: Props) {
   return (
-    <div className="flex flex-col gap-4">
+    // Formulario real: Enter en el correo o en la contraseña envía el login,
+    // sin tener que hacer clic en "Iniciar Sesión". Los demás botones son
+    // type="button" para que Enter no los dispare.
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (loading) return
+        // Enter en el correo con la contraseña vacía: pasa a la contraseña
+        // en vez de mandar un intento que seguro falla.
+        if (!pass) {
+          const campo = e.currentTarget.elements.namedItem('password')
+          if (campo instanceof HTMLInputElement) campo.focus()
+          return
+        }
+        void onLogin()
+      }}
+      className="flex flex-col gap-4"
+    >
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-[#C4A97A] tracking-wide">Correo o documento</label>
         <input
           type="text"
+          name="usuario"
+          autoComplete="username"
+          enterKeyHint="next"
           placeholder="correo@ejemplo.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -52,12 +73,16 @@ export default function LoginSection({
         <div className="relative">
           <input
             type={showPass ? 'text' : 'password'}
+            name="password"
+            autoComplete="current-password"
+            enterKeyHint="go"
             placeholder="Tu contraseña"
             value={pass}
             onChange={(e) => setPass(e.target.value)}
-            className="w-full px-4 py-3 pr-16 rounded-xl text-sm text-[#F5E6C8] bg-[#0a0805] border border-[#D4AF37]/20 transition-all outline-none placeholder:text-[#4A3D28] focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/20"
+            className="w-full px-4 py-3 pr-16 rounded-xl [&::-ms-reveal]:hidden text-sm text-[#F5E6C8] bg-[#0a0805] border border-[#D4AF37]/20 transition-all outline-none placeholder:text-[#4A3D28] focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/20"
           />
           <button
+            type="button"
             onClick={() => setShowPass(!showPass)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6B5D3F] hover:text-[#D4AF37] transition-colors"
           >
@@ -71,6 +96,7 @@ export default function LoginSection({
       <div className="flex items-center justify-between">
         <RememberCheckbox checked={remember} onChange={setRemember} />
         <button
+          type="button"
           onClick={onForgot}
           className="text-xs text-[#9A7B50] hover:text-[#D4AF37] transition-colors underline"
         >
@@ -79,7 +105,7 @@ export default function LoginSection({
       </div>
 
       <LoginPrimaryButton
-        onClick={() => void onLogin()}
+        type="submit"
         disabled={loading}
         className="mt-2 active:scale-[0.99]"
       >
@@ -91,12 +117,13 @@ export default function LoginSection({
       <p className="text-center text-[#6B5D3F] text-xs">
         ¿Aún no tienes una cuenta?{' '}
         <button
+          type="button"
           onClick={() => navigate('roulette')}
           className="text-[#D4AF37] font-semibold hover:underline transition-all"
         >
           Gira y regístrate
         </button>
       </p>
-    </div>
+    </form>
   )
 }

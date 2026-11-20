@@ -1,126 +1,240 @@
 import type { Page } from '@/shared/types/navigation'
-import { TriangleAlert } from 'lucide-react'
-import Footer from '@/shared/components/Footer'
+import {
+  Ban,
+  CalendarClock,
+  CircleCheck,
+  Disc3,
+  FileText,
+  Gavel,
+  HeartHandshake,
+  Lock,
+  ScrollText,
+  ShieldAlert,
+  Ticket,
+  TriangleAlert,
+  UserCheck,
+} from 'lucide-react'
 import LegalBackButton from '@/shared/components/LegalBackButton'
+import InfoPageShell from '@/shared/components/info/InfoPageShell'
+import PageHero from '@/shared/components/info/PageHero'
+import LegalDocument, { type SeccionLegal } from '@/shared/components/info/LegalDocument'
+import PremiosResumen from '@/shared/components/info/PremiosResumen'
+import { LINEA_PRINCIPAL } from '@/shared/data/ayuda'
 
 interface Props {
   navigate: (page: Page) => void
 }
 
-const SECTIONS = [
-  {
-    title: '1. Aceptación de los Términos',
-    body: 'Al participar en la promoción "Gira y Gana" de Gran Casino Cucuta, el usuario declara haber leído, entendido y aceptado en su totalidad estos Términos y Condiciones. El desconocimiento de los mismos no exime su cumplimiento.',
-  },
-  {
-    title: '2. Elegibilidad y Requisitos',
-    body: 'Podrán participar personas naturales mayores de 18 años, residentes en Colombia, que cuenten con documento de identidad válido. Se permite un (1) registro por persona y por documento de identidad. Gran Casino Cucuta podrá solicitar la verificación de identidad en cualquier momento para validar el cumplimiento de estos requisitos.',
-  },
-  {
-    title: '3. Mecánica de la Promoción',
-    body: 'La ruleta de bienvenida otorga un (1) giro gratuito por persona, sin necesidad de registro previo. El resultado se determina de forma aleatoria al momento del giro. Para reclamar el beneficio obtenido, el usuario deberá completar el proceso de registro dentro del tiempo indicado en la pantalla de resultado; una vez vencido dicho plazo, el premio podrá quedar sin efecto.',
-  },
-  {
-    title: '4. Premios y Beneficios',
-    body: 'Los premios de la promoción son: bono de $20.000, bono de $50.000, giro adicional en la ruleta, cartón de bingo premium, entrada a evento especial y premio sorpresa. Todos los premios son bonos, cortesías o beneficios en especie, redimibles única y exclusivamente en cualquiera de nuestras 3 sedes de Gran Casino Cúcuta, presentando el documento de identidad del titular. La disponibilidad de cada premio está sujeta a las condiciones e inventario vigente en cada sede.',
-    highlight: true,
-  },
-  {
-    title: '5. Ningún Premio en Efectivo ni por Transferencia',
-    body: 'Ningún premio, bono o beneficio obtenido a través de esta promoción se entrega en dinero en efectivo, ni se transfiere a cuentas bancarias, billeteras digitales o cualquier otro medio de pago. Los bonos no son transferibles a terceros ni canjeables por dinero, y su uso está limitado a los productos y servicios ofrecidos en nuestras sedes.',
-    highlight: true,
-  },
-  {
-    title: '6. Vigencia y Modificaciones',
-    body: 'Gran Casino Cucuta se reserva el derecho de modificar, suspender o dar por terminada la promoción, así como de actualizar el catálogo de premios y el contenido de estos Términos y Condiciones en cualquier momento, informando oportunamente a los usuarios los cambios relevantes a través de esta plataforma.',
-  },
-  {
-    title: '7. Protección de Datos Personales',
-    body: 'Los datos personales suministrados durante el registro serán tratados conforme a la Ley 1581 de 2012 y demás normas concordantes sobre protección de datos personales en Colombia, así como a la Política de Privacidad de Gran Casino Cucuta. El usuario podrá ejercer sus derechos de acceso, corrección, actualización y supresión de sus datos en cualquier momento.',
-  },
-  {
-    title: '8. Juego Responsable',
-    body: 'Esta promoción está dirigida exclusivamente a mayores de 18 años. Gran Casino Cucuta promueve el juego responsable e invita a sus usuarios a participar de forma moderada. Ante cualquier inquietud relacionada con el juego responsable, comunícate a la línea de ayuda 01-8000-111-444.',
-  },
-  {
-    title: '9. Restricciones y Descalificación',
-    body: 'Cualquier intento de fraude, suplantación de identidad, uso de múltiples cuentas o suministro de información falsa dará lugar a la descalificación inmediata del participante y a la anulación de los premios obtenidos, sin perjuicio de las acciones legales a que haya lugar.',
-  },
-  {
-    title: '10. Ley Aplicable y Contacto',
-    body: 'Estos Términos y Condiciones se rigen por las leyes de la República de Colombia. Para consultas, quejas o reclamos relacionados con esta promoción, puedes comunicarte a través de los canales de atención al cliente de Gran Casino Cucuta o acercarte a cualquiera de nuestras sedes.',
-  },
-]
+const fuerte = 'font-semibold text-[#F5E6C8]'
+
+// La mecánica aquí escrita tiene que coincidir con el backend:
+// GIROS_MAXIMOS = 3 (server/src/routes/ruleta.routes.ts), un bono por cliente
+// (BonoGanado.clienteId @unique), ticket de 30 minutos (TICKET_TTL_MINUTES) y
+// catálogo de 3 bonos (server/prisma/seed.ts).
+function secciones(navigate: (page: Page) => void): SeccionLegal[] {
+  return [
+    {
+      id: 'aceptacion',
+      title: 'Aceptación de los términos',
+      icon: FileText,
+      body: (
+        <p>
+          Al participar en la promoción <span className={fuerte}>"Gira y Gana"</span> de Gran Casino Cúcuta, el usuario
+          declara haber leído, entendido y aceptado en su totalidad estos Términos y Condiciones. El desconocimiento de
+          los mismos no exime su cumplimiento.
+        </p>
+      ),
+    },
+    {
+      id: 'elegibilidad',
+      title: 'Elegibilidad y requisitos',
+      icon: UserCheck,
+      body: (
+        <ul className="space-y-2">
+          {[
+            'Personas naturales mayores de 18 años, residentes en Colombia.',
+            'Documento de identidad válido, que se presenta en caja para redimir.',
+            'Un (1) registro por persona y por documento de identidad.',
+            'Gran Casino Cúcuta puede verificar la identidad en cualquier momento.',
+          ].map((t) => (
+            <li key={t} className="flex gap-2">
+              <CircleCheck size={16} className="mt-0.5 flex-shrink-0 text-[#D4AF37]" />
+              {t}
+            </li>
+          ))}
+        </ul>
+      ),
+    },
+    {
+      id: 'mecanica',
+      title: 'Mecánica de la promoción',
+      icon: Disc3,
+      body: (
+        <>
+          <p>
+            Cada visitante tiene <span className={fuerte}>5 giros</span> de la tragamonedas de bienvenida, sin
+            registro previo. El resultado lo decide el sistema de forma aleatoria en el momento del giro. Hay premio
+            cuando caen tres símbolos iguales en la línea de pago: <span className={fuerte}>tres cerezas</span>, bono
+            de $10.000; <span className={fuerte}>tres campanas</span>, bono de $20.000;{' '}
+            <span className={fuerte}>tres sietes</span>, bono de $50.000. Cualquier otra combinación no tiene premio.
+            Si se gana más de una vez, se conserva el bono de mayor valor.
+          </p>
+          <p>
+            Para reclamar el premio obtenido se debe completar el registro dentro de los{' '}
+            <span className={fuerte}>30 minutos</span> siguientes al giro. Vencido ese plazo el premio queda sin
+            efecto. La promoción entrega <span className={fuerte}>un único bono por persona</span>: una vez reclamado,
+            no se puede volver a girar.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: 'premios',
+      title: 'Premios',
+      icon: Ticket,
+      highlight: true,
+      body: (
+        <>
+          <p>
+            Los premios de la promoción son únicamente <span className={fuerte}>tres bonos de juego</span>:
+          </p>
+          <div className="py-2">
+            <PremiosResumen />
+          </div>
+          <p>
+            Se redimen en la caja de cualquiera de nuestras 3 sedes de Gran Casino Cúcuta presentando el documento de
+            identidad del titular. Los bonos pendientes de premios anteriores que fueron retirados del catálogo (bono de
+            $5.000, cartón de bingo, entrada a evento y premio sorpresa) se convierten en un{' '}
+            <span className={fuerte}>bono de $10.000</span>.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: 'sin-efectivo',
+      title: 'Ningún premio en efectivo ni por transferencia',
+      icon: Ban,
+      highlight: true,
+      body: (
+        <p>
+          Ningún bono se entrega en dinero en efectivo ni se transfiere a cuentas bancarias, billeteras digitales u
+          otro medio de pago. Los bonos no son transferibles a terceros ni canjeables por dinero, y solo se usan en los
+          juegos y servicios de nuestras sedes.
+        </p>
+      ),
+    },
+    {
+      id: 'vigencia',
+      title: 'Vigencia y modificaciones',
+      icon: CalendarClock,
+      body: (
+        <>
+          <p>
+            Cada bono se puede redimir hasta la fecha de vigencia que se informa al ganarlo, en la ruleta y en tu
+            cuenta. Si la promoción se extiende, los bonos pendientes pueden extenderse con ella; si se acorta, los bonos
+            ya entregados conservan su fecha.
+          </p>
+          <p>
+            Gran Casino Cúcuta puede modificar, suspender o terminar la promoción y actualizar el catálogo de premios o
+            estos términos, informando los cambios relevantes en esta plataforma.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: 'datos',
+      title: 'Protección de datos personales',
+      icon: Lock,
+      body: (
+        <p>
+          Los datos del registro se tratan conforme a la Ley 1581 de 2012 y a nuestra{' '}
+          <button type="button" onClick={() => navigate('privacy')} className="text-[#F0C847] underline hover:text-[#D4AF37]">
+            Política de Privacidad
+          </button>
+          . Puedes conocer, actualizar, rectificar y pedir la supresión de tus datos en cualquier momento.
+        </p>
+      ),
+    },
+    {
+      id: 'juego-responsable',
+      title: 'Juego responsable',
+      icon: HeartHandshake,
+      body: (
+        <p>
+          Esta promoción es exclusiva para mayores de 18 años. El juego es entretenimiento, no una forma de ganar
+          dinero. Si sientes que dejó de serlo, llama a la línea{' '}
+          <a href={`tel:${LINEA_PRINCIPAL.tel}`} className="font-semibold text-[#F0C847] underline">
+            {LINEA_PRINCIPAL.numero}
+          </a>{' '}
+          o consulta nuestra sección de{' '}
+          <button
+            type="button"
+            onClick={() => navigate('responsible-gaming')}
+            className="text-[#F0C847] underline hover:text-[#D4AF37]"
+          >
+            Juego Responsable
+          </button>
+          .
+        </p>
+      ),
+    },
+    {
+      id: 'descalificacion',
+      title: 'Restricciones y descalificación',
+      icon: ShieldAlert,
+      body: (
+        <p>
+          Cualquier intento de fraude, suplantación de identidad, uso de múltiples cuentas o información falsa dará
+          lugar a la descalificación inmediata y a la anulación de los premios, sin perjuicio de las acciones legales a
+          que haya lugar.
+        </p>
+      ),
+    },
+    {
+      id: 'ley',
+      title: 'Ley aplicable y contacto',
+      icon: Gavel,
+      body: (
+        <p>
+          Estos términos se rigen por las leyes de la República de Colombia. Para consultas, quejas o reclamos puedes
+          usar los canales de atención de Gran Casino Cúcuta o acercarte a cualquiera de nuestras sedes.
+        </p>
+      ),
+    },
+  ]
+}
 
 export default function TermsPage({ navigate }: Props) {
   return (
-    <div className="min-h-screen flex flex-col pt-28 md:pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-transparent">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <LegalBackButton />
-        </div>
-        <p className="text-[#D4AF37] text-xs font-bold tracking-[0.3em] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
-          GRAN CASINO CUCUTA
-        </p>
-        <h1 className="text-3xl md:text-4xl font-black text-[#F5E6C8] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Términos y Condiciones
-        </h1>
-        <p className="text-[#6B5D3F] text-sm mb-8">
-          Promoción "Gira y Gana" · Aplican a nuestras 3 sedes de Gran Casino Cúcuta.
-        </p>
+    <InfoPageShell navigate={navigate} back={<LegalBackButton />} ancho="lectura">
+      <PageHero
+        eyebrow="GRAN CASINO CÚCUTA"
+        title="Términos y"
+        highlight="Condiciones"
+        icon={ScrollText}
+        subtitle='Promoción "Gira y Gana" · Aplican en nuestras 3 sedes de Gran Casino Cúcuta.'
+      />
 
-        {/* Disclaimer banner */}
-        <div className="rounded-2xl border border-[#D4AF37]/35 p-5 mb-10 flex gap-4"
-          style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04))' }}>
-          <TriangleAlert size={28} className="text-[#D4AF37] flex-shrink-0" />
-          <div>
-            <p className="text-[#D4AF37] text-xs font-bold tracking-wider mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-              AVISO IMPORTANTE
-            </p>
-            <p className="text-[#C4A97A] text-sm leading-relaxed">
-              Ningún premio de esta promoción se entrega en{' '}
-              <span className="text-[#F5E6C8] font-semibold">dinero en efectivo ni por transferencia</span>. Todos
-              los bonos y beneficios son{' '}
-              <span className="text-[#F5E6C8] font-semibold">redimibles únicamente en cualquiera de nuestras sedes</span>{' '}
-              de Gran Casino Cúcuta.
-            </p>
-          </div>
+      {/* Lo que nadie debe pasar por alto, antes del texto largo. */}
+      <div className="mb-10 flex gap-4 rounded-2xl border border-[#D4AF37]/40 p-5" style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.14), rgba(212,175,55,0.03))' }}>
+        <TriangleAlert size={28} className="flex-shrink-0 text-[#F0C847]" />
+        <div>
+          <p className="mb-1 text-xs font-bold tracking-wider text-[#D4AF37]">EN RESUMEN</p>
+          <p className="text-sm leading-relaxed text-[#E0CDB0]">
+            Ganas uno de <span className={fuerte}>tres bonos de juego ($10.000, $20.000 o $50.000)</span>, uno por
+            persona, y lo redimes en caja con tu cédula. Ningún premio se entrega en{' '}
+            <span className={fuerte}>efectivo ni por transferencia</span>. Solo mayores de 18 años.
+          </p>
         </div>
-
-        {/* Sections */}
-        <div className="flex flex-col gap-4">
-          {SECTIONS.map((section) => (
-            <div key={section.title}
-              className={`rounded-2xl p-6 border ${section.highlight ? 'border-[#D4AF37]/40' : 'border-[#D4AF37]/12'}`}
-              style={{ background: section.highlight ? 'linear-gradient(145deg, rgba(212,175,55,0.08), #121009)' : '#121009' }}>
-              <h3 className="font-bold text-[#F5E6C8] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
-                {section.title}
-              </h3>
-              <p className="text-sm text-[#9A7B50] leading-relaxed">{section.body}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* El mismo "volver" repetido al pie. La página son 10 secciones: quien
-            entra desde el modal del premio a comprobar las condiciones termina
-            de leer aquí abajo, y obligarlo a subir hasta el encabezado para
-            poder reclamar es justo la fricción que este botón existe para
-            evitar. */}
-        <div className="mt-10 flex justify-center">
-          <LegalBackButton />
-        </div>
-
-        <p className="text-center text-[#3A3020] text-xs mt-10">
-          ¿Tienes dudas sobre estos términos?{' '}
-          <button onClick={() => navigate('login')} className="text-[#9A7B50] hover:text-[#D4AF37] transition-colors underline">
-            Contáctanos desde tu cuenta
-          </button>
-        </p>
       </div>
 
-      <div className="mt-auto -mx-4 sm:-mx-6 lg:-mx-8 pt-20">
-        <Footer navigate={navigate} />
+      <LegalDocument secciones={secciones(navigate)} />
+
+      {/* El "volver" repetido al pie: quien entra desde el modal del premio
+          termina de leer aquí abajo y no debe tener que subir para reclamar. */}
+      <div className="mt-12 flex justify-center">
+        <LegalBackButton />
       </div>
-    </div>
+    </InfoPageShell>
   )
 }

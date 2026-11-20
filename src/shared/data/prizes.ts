@@ -1,4 +1,4 @@
-import { Gift, Layers, Ticket, Trophy, PartyPopper, Coins, Banknote, type LucideIcon } from 'lucide-react'
+import { Gift, Trophy, Banknote, type LucideIcon } from 'lucide-react'
 
 export interface RoulettePrize {
   // Debe coincidir con el campo `clave` sembrado en server/prisma/seed.ts:
@@ -9,6 +9,8 @@ export interface RoulettePrize {
   color: string
   lightColor: string
   prize: string
+  /** Valor del bono en pesos, para el boleto de la sección de premios. */
+  amount: number
   icon: LucideIcon
   detail: string
   monetary: boolean
@@ -16,21 +18,14 @@ export interface RoulettePrize {
 }
 
 // Catálogo real de premios de la promoción "Gira y Gana". Ningún premio se entrega
-// en efectivo ni por transferencia: todos son bonos y cortesías redimibles
+// en efectivo ni por transferencia: todos son bonos de juego redimibles
 // únicamente en cualquiera de nuestras 3 sedes de Gran Casino Cúcuta.
+//
+// Desde noviembre de 2026 la ruleta entrega solo bonos de $10.000, $20.000 y
+// $50.000. El bono de $5.000, el cartón de bingo, la entrada a evento y el
+// premio sorpresa se retiraron; quien tenía uno sin redimir pasó al bono de
+// $10.000 (ver server/src/utils/premiosRetirados.ts).
 export const PRIZES: RoulettePrize[] = [
-  {
-    clave: 'bono-5000',
-    label: '5.000',
-    sublabel: 'Bono',
-    color: '#5C4A1E',
-    lightColor: '#8A7030',
-    prize: 'Bono de $5.000',
-    icon: Coins,
-    detail: 'Bono redimible en cualquiera de nuestras 3 sedes al completar tu registro.',
-    monetary: true,
-    weight: 25,
-  },
   {
     clave: 'bono-10000',
     label: '10.000',
@@ -38,10 +33,11 @@ export const PRIZES: RoulettePrize[] = [
     color: '#705019',
     lightColor: '#A87F28',
     prize: 'Bono de $10.000',
+    amount: 10_000,
     icon: Banknote,
     detail: 'Bono redimible en cualquiera de nuestras 3 sedes al completar tu registro.',
     monetary: true,
-    weight: 20,
+    weight: 30,
   },
   {
     clave: 'bono-20000',
@@ -50,38 +46,11 @@ export const PRIZES: RoulettePrize[] = [
     color: '#8A6000',
     lightColor: '#C08800',
     prize: 'Bono de $20.000',
+    amount: 20_000,
     icon: Gift,
     detail: 'Bono redimible en cualquiera de nuestras 3 sedes al completar tu registro.',
     monetary: true,
-    weight: 20,
-  },
-  {
-    clave: 'carton-bingo',
-    // Premio permanente, sin fecha de evento: da acceso al próximo bingo en
-    // vivo del club. Estuvo atado a la campaña del 5 de septiembre de 2026
-    // (etiqueta con fecha y una moto de por medio); esa campaña terminó y el
-    // premio volvió a su forma de siempre.
-    label: 'Cartón',
-    sublabel: 'Bingo',
-    color: '#3D006B',
-    lightColor: '#6A00B8',
-    prize: 'Cartón de Bingo Premium',
-    icon: Layers,
-    detail: 'Para el próximo evento en vivo del club, canjeable en caja.',
-    monetary: false,
-    weight: 8,
-  },
-  {
-    clave: 'entrada-evento',
-    label: 'Entrada',
-    sublabel: 'Evento',
-    color: '#0D3B0D',
-    lightColor: '#1A6E1A',
-    prize: 'Entrada a Evento Especial',
-    icon: Ticket,
-    detail: 'Acceso a nuestro próximo evento especial en sede.',
-    monetary: false,
-    weight: 7,
+    weight: 12,
   },
   {
     clave: 'bono-50000',
@@ -90,6 +59,7 @@ export const PRIZES: RoulettePrize[] = [
     color: '#C9A227',
     lightColor: '#F0C847',
     prize: 'Bono de $50.000',
+    amount: 50_000,
     icon: Trophy,
     detail: 'Nuestro bono de bienvenida mayor, redimible en sede al completar tu registro.',
     monetary: true,
@@ -100,17 +70,5 @@ export const PRIZES: RoulettePrize[] = [
     // mas entregado pese a ser de los menos probables (ver el comentario
     // largo en seed.ts).
     weight: 1,
-  },
-  {
-    clave: 'premio-sorpresa',
-    label: 'Premio',
-    sublabel: 'Sorpresa',
-    color: '#7B1515',
-    lightColor: '#B52020',
-    prize: 'Premio Sorpresa',
-    icon: PartyPopper,
-    detail: 'Una cortesía especial de Gran Casino Cucuta, disponible en sede.',
-    monetary: false,
-    weight: 4,
   },
 ]

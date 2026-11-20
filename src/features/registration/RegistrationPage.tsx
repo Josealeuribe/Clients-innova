@@ -147,16 +147,34 @@ export default function RegistrationPage({
       <div className="max-w-lg mx-auto">
         <PrizeBanner prize={prize} />
 
-        <h2
-          className="text-2xl font-black text-[#F5E6C8] mb-1"
-          style={{ fontFamily: "'Inter', sans-serif" }}
+        {/* Tarjeta del formulario: borde dorado, fondo con textura y el
+            encabezado del paso con su número. */}
+        <div
+          className="relative rounded-2xl border border-[#D4AF37]/20 p-5 shadow-[0_24px_60px_rgba(0,0,0,0.55)] sm:p-7"
+          style={{
+            background:
+              'radial-gradient(120% 80% at 0% 0%, rgba(212,175,55,0.08), transparent 55%), linear-gradient(180deg, #17130C 0%, #0F0C07 100%)',
+          }}
         >
-          {currentStep.title}
-        </h2>
-
-        <p className="text-[#6B5D3F] text-sm mb-8">
-          {currentStep.description}
-        </p>
+        <div className="mb-6 flex items-start gap-3 border-b border-dashed border-[#D4AF37]/15 pb-5">
+          <span
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-base font-black text-[#1a1408]"
+            style={{ background: 'linear-gradient(135deg, #F0C847, #D4AF37, #A0832A)' }}
+          >
+            {fields.step}
+          </span>
+          <div>
+            <h2
+              className="text-xl font-black text-[#F5E6C8] sm:text-2xl"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              {currentStep.title}
+            </h2>
+            <p className="mt-0.5 text-sm text-[#9A7B50]">
+              {currentStep.description}
+            </p>
+          </div>
+        </div>
 
         {fields.step === 1 && (
           <PersonalDataSection
@@ -244,6 +262,7 @@ export default function RegistrationPage({
           onBack={back}
           onSubmit={() => void submit()}
         />
+        </div>
 
         <p className="text-center text-[#3A3020] text-xs mt-6">
           ¿Ya tienes cuenta?{' '}

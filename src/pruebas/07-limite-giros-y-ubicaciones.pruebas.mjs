@@ -9,7 +9,7 @@ import { BASE, createSuite, registroValido, testEmail, testDocNum } from './_hel
 
 const { assert, finish } = createSuite('07 - Límite de giros y ubicaciones en base')
 
-const GIROS_ESPERADOS = 3
+const GIROS_ESPERADOS = 5
 
 // Cliente HTTP que conserva las cookies, como haría un navegador. `fetch` de
 // Node no las guarda solo.
@@ -67,15 +67,17 @@ async function main() {
   })
   assert(combinacionMala.status === 400, 'una ciudad que no pertenece al departamento también se rechaza')
 
-  // 3) Límite de giros: un visitante nuevo tiene sus 3
+  // 3) Límite de giros: un visitante nuevo tiene sus 5
   const navegador = crearNavegador()
   const inicial = await navegador('/ruleta/giros-restantes')
   assert(inicial.body?.maximo === GIROS_ESPERADOS, `el máximo es ${GIROS_ESPERADOS} giros`)
   assert(inicial.body?.restantes === GIROS_ESPERADOS, 'un visitante nuevo tiene todos sus giros')
 
   // 4) Los giros se consumen y el contador baja
+  let premiados = 0
   for (let i = 1; i <= GIROS_ESPERADOS; i++) {
     const giro = await navegador('/ruleta/girar-anonimo', { method: 'POST' })
+    if (giro.body?.premio) premiados++
     assert(giro.status === 200, `el giro ${i} de ${GIROS_ESPERADOS} se permite`)
     assert(
       giro.body?.restantes === GIROS_ESPERADOS - i,
@@ -83,10 +85,13 @@ async function main() {
     )
   }
 
-  // 5) El cuarto se rechaza. Este es el caso del que había que defenderse:
+  // Regla de la tragamonedas: en sus 5 giros, el visitante gana 1 o 2 bonos.
+  assert(premiados >= 1 && premiados <= 2, `en ${GIROS_ESPERADOS} giros salieron 1 o 2 premios (salieron ${premiados})`)
+
+  // 5) El giro extra se rechaza. Este es el caso del que había que defenderse:
   //    recargar para volver a tirar hasta sacar el premio deseado.
   const cuarto = await navegador('/ruleta/girar-anonimo', { method: 'POST' })
-  assert(cuarto.status === 429, 'el cuarto giro se rechaza con 429')
+  assert(cuarto.status === 429, 'el giro extra se rechaza con 429')
   assert(cuarto.body?.restantes === 0, 'el rechazo informa que no quedan giros')
 
   // 6) Recargar la página no reinicia nada: es la misma cookie

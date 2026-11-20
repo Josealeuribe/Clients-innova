@@ -1,25 +1,21 @@
 import { PRIZES } from '@/shared/data/prizes'
 
 const MARKETING_TAG: Record<string, string> = {
-  'bono-5000': 'FÁCIL DE GANAR',
   'bono-10000': 'MÁS COMÚN',
   'bono-20000': 'MÁS POPULAR',
   'bono-50000': 'PREMIO MAYOR',
-  'carton-bingo': 'NUEVO',
-  'entrada-evento': 'VIP',
-  'premio-sorpresa': 'PREMIUM',
 }
 
 const STEPS = [
   {
     num: '01',
-    title: 'Gira la Ruleta',
+    title: 'Gira la Tragamonedas',
     desc: 'Presiona el botón y participa en nuestra promoción de bienvenida. Es gratis y no requiere registro previo.',
   },
   {
     num: '02',
     title: 'Descubre tu Premio',
-    desc: 'La ruleta se detiene y revela el beneficio exclusivo que tenemos preparado para ti.',
+    desc: 'Tres cerezas: $10.000. Tres campanas: $20.000. Tres sietes: $50.000. Tienes 5 giros.',
   },
   {
     num: '03',
